@@ -2,7 +2,7 @@ from .serializers import UserRegisterSerializer, UserLoginSerializer
 from rest_framework.decorators import api_view
 from rest_framework import status
 from rest_framework.response import Response
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 
 @api_view(['POST'])
 def user_register(request):
@@ -22,3 +22,9 @@ def user_login(request):
         return Response({"message": "Login successful!"}, status=status.HTTP_200_OK)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def user_logout(request):
+    logout(request)
+    
+    return Response({"message" : "Logout Successful!"}, status=status.HTTP_200_OK)
