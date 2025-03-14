@@ -8,8 +8,15 @@ from django.contrib.auth import login, logout
 def user_register(request):
     serializer = UserRegisterSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
-        return Response({"message" : "User registered successfully!"}, status=status.HTTP_201_CREATED)
+        user = serializer.save()
+        return Response({
+            "message": "User registered successfully!",
+            "user": {
+                "id": user.id,
+                "email": user.email
+            }
+        }, status=status.HTTP_201_CREATED)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -19,12 +26,17 @@ def user_login(request):
     if serializer.is_valid():
         user = serializer.validated_data['user']
         login(request, user)  
-        return Response({"message": "Login successful!"}, status=status.HTTP_200_OK)
+        return Response({
+            "message": "Login successful!",
+            "user": {
+                "id": user.id,
+                "email": user.email
+            }
+        }, status=status.HTTP_200_OK)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def user_logout(request):
     logout(request)
-    
-    return Response({"message" : "Logout Successful!"}, status=status.HTTP_200_OK)
+    return Response({"message": "Logout Successful!"}, status=status.HTTP_200_OK)

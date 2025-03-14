@@ -8,37 +8,43 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ['email', 'password1', 'password2']
 
     def validate(self, data):
+        data['email'] = data['email'].lower()  
         if data['password1'] != data['password2']:
-            raise serializers.ValidationError({"password" : "Passwords must match."})
+            raise serializers.ValidationError({"password": "Passwords must match."})
         
         if User.objects.filter(email=data['email']).exists():
-            raise serializers.ValidationError({"email" : "This email is already in use."})
-        
-        if User.objects.filter(username=data['username']).exists():
-             raise serializers.ValidationError({"username": "This username is already taken."})
+            raise serializers.ValidationError({"email": "This email is already in use."})
+
         return data
 
     def create(self, validated_data):
         validated_data.pop('password2')
         user = User.objects.create_user(
-            username=validated_data['username'],
+            username=validated_data['email'], 
             email=validated_data['email'],
             password=validated_data['password1']
         )
         return user
-    
+
 class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField(write_only=True)  
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        user = authenticate(username=data['username'], password=data['password'])
-        
+        email = data.get('email').lower()  
+        password = data.get('password')
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"error": "Invalid email or password."})
+
+        user = authenticate(username=user.username, password=password)  
         if not user:
-            raise serializers.ValidationError({"error": "Invalid username or password."})
-        
-        data['user'] = user 
+            raise serializers.ValidationError({"error": "Invalid email or password."})
+
+        data['user'] = user
         return data
