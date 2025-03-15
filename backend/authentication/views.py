@@ -1,6 +1,7 @@
 from .serializers import UserRegisterSerializer, UserLoginSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import login, logout
 
@@ -45,6 +46,10 @@ def user_login(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def user_logout(request):
     logout(request)
-    return Response({"message": "Logout Successful!"}, status=status.HTTP_200_OK)
+    response = Response({"message": "Logout Successful!"}, status=status.HTTP_200_OK)
+    response.delete_cookie("sessionid")
+    response.delete_cookie("csrftoken")
+    return response
