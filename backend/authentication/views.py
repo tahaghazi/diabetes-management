@@ -25,12 +25,20 @@ def user_login(request):
     
     if serializer.is_valid():
         user = serializer.validated_data['user']
-        login(request, user)  
+        login(request, user)
+
+        account_type = "unknown"
+        if hasattr(user, 'patientprofile'):
+            account_type = 'patient'
+        elif hasattr(user, 'doctorprofile'):
+            account_type = 'doctor'
+
         return Response({
             "message": "Login successful!",
             "user": {
                 "id": user.id,
-                "email": user.email
+                "email": user.email,
+                "account_type": account_type
             }
         }, status=status.HTTP_200_OK)
     

@@ -1,14 +1,16 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from profiles.models import PatientProfile, DoctorProfile
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password1 = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
+    account_type = serializers.ChoiceField(choices=[('patient', 'Patient'), ('doctor', 'Doctor')])
 
     class Meta:
         model = User
-        fields = ['email', 'password1', 'password2']
+        fields = ['email', 'password1', 'password2', 'account_type']
 
     def validate(self, data):
         data['email'] = data['email'].lower()  
@@ -22,11 +24,18 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
+        account_type = validated_data.pop('account_type')
         user = User.objects.create_user(
             username=validated_data['email'], 
             email=validated_data['email'],
             password=validated_data['password1']
         )
+        
+        if account_type == 'patient':
+            PatientProfile.objects.create(user=user, name=user.email.split('@')[0])
+        elif account_type == 'doctor':
+            DoctorProfile.objects.create(user=user, name=user.email.split('@')[0], specialization="Unknown")
+
         return user
 
 class UserLoginSerializer(serializers.Serializer):
@@ -45,6 +54,15 @@ class UserLoginSerializer(serializers.Serializer):
         user = authenticate(username=user.username, password=password)  
         if not user:
             raise serializers.ValidationError({"error": "Invalid email or password."})
+        
+        if hasattr(user, 'patientprofile'):
+            account_type = 'patient'
+        elif hasattr(user, 'doctorprofile'):
+            account_type = 'doctor'
+        else:
+            raise serializers.ValidationError({"error": "User profile is not set correctly."})
 
         data['user'] = user
+        data['account_type'] = account_type
+        
         return data
