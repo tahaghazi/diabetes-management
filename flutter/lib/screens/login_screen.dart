@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
-import 'forgot_password_screen.dart';
-import 'sign_up_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -14,10 +12,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   // دالة للتحقق من صحة البريد الإلكتروني
-  bool isValidEmail(String email) {
-    return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(email);
-  }
-
+ bool isValidEmail(String email) {
+  return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(email);
+}
   void _login() {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();

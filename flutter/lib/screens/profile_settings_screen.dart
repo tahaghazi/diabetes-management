@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   @override
@@ -6,14 +7,42 @@ class ProfileSettingsScreen extends StatefulWidget {
 }
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
-  final TextEditingController _nameController = TextEditingController(text: "Youssef");
-  final TextEditingController _emailController = TextEditingController(text: "youssef@gmail.com");
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   bool _notificationsEnabled = true;
 
-  void _saveSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تم تحديث الملف الشخصي بنجاح!')),
+  Future<void> _logout() async {
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
+  Future<void> _contactSupport() async {
+    final whatsappNumber = "+201276619806";
+    final whatsappUrl = Uri.parse("https://wa.me/$whatsappNumber");
+
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(whatsappUrl);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("تعذر فتح واتساب")),
+      );
+    }
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool enabled = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          border: OutlineInputBorder(),
+          labelText: label,
+        ),
+        enabled: enabled,
+      ),
     );
   }
 
@@ -21,47 +50,76 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('الملف الشخصي والإعدادات')),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildTextField(controller: _nameController, label: "الاسم الكامل", icon: Icons.person),
-            SizedBox(height: 10),
-            _buildTextField(controller: _emailController, label: "البريد الإلكتروني", icon: Icons.email, keyboardType: TextInputType.emailAddress),
-            SizedBox(height: 10),
-            _buildTextField(controller: _passwordController, label: "كلمة المرور الجديدة", icon: Icons.lock, obscureText: true),
-            SizedBox(height: 20),
-            SwitchListTile(
-              title: Text("تفعيل الإشعارات"),
-              value: _notificationsEnabled,
-              onChanged: (bool value) {
-                setState(() {
-                  _notificationsEnabled = value;
-                });
-              },
-              secondary: Icon(Icons.notifications),
+      body: Stack(
+        children: [
+          ListView(
+            padding: EdgeInsets.all(16),
+            children: [
+              _buildTextField(controller: _nameController, label: "الاسم"),
+              _buildTextField(controller: _emailController, label: "البريد الإلكتروني", enabled: false),
+              SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "التحكم في الإشعارات",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8),
+                      SwitchListTile(
+                        title: Text("تفعيل الإشعارات"),
+                        value: _notificationsEnabled,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _notificationsEnabled = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("تم حفظ التغييرات بنجاح!")),
+                  );
+                },
+                child: Text("حفظ الإعدادات"),
+              ),
+              SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: _logout,
+                  child: Text(
+                    "تسجيل الخروج",
+                    style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: ElevatedButton.icon(
+              onPressed: _contactSupport,
+              icon: Icon(Icons.support, color: Colors.white),
+              label: Text("الدعم والشكاوى والاقتراحات"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveSettings,
-              child: Text('حفظ التغييرات'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({required TextEditingController controller, required String label, required IconData icon, TextInputType keyboardType = TextInputType.text, bool obscureText = false}) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(),
-        labelText: label,
-        prefixIcon: Icon(icon),
+          ),
+        ],
       ),
     );
   }

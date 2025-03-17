@@ -7,94 +7,186 @@ import 'alternative_medications_screen.dart';
 import 'ai_analysis_screen.dart';
 import 'profile_settings_screen.dart';
 
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({Key? key}) : super(key: key);
 
-class DashboardScreen extends StatelessWidget {
+  @override
+  _DashboardScreenState createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _showWelcomeMessage = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showWelcomeMessage = false;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('الصفحة الرئيسة'),
+        title: const Text(
+          'الصفحة الرئيسية',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.blue,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout, color: Colors.blue),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
-              // تسجيل الخروج وإعادة المستخدم إلى شاشة تسجيل الدخول
-              Navigator.pushAndRemoveUntil(
-                context,
+              Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => LoginScreen()),
-                    (route) => false, // إزالة جميع الشاشات السابقة من المكدس
               );
             },
           ),
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          children: [
-            _buildDashboardButton(
-              context,
-              title: 'تتبع مستوى السكر',
-              icon: Icons.show_chart,
-              screen: GlucoseTrackingScreen(),
-            ),
-            _buildDashboardButton(
-              context,
-              title: 'التذكيرات',
-              icon: Icons.medical_services,
-              screen: RemindersScreen(),
-            ),
-            _buildDashboardButton(
-              context,
-              title: 'الشات بوت',
-              icon: Icons.chat,
-              screen: ChatbotScreen(),
-            ),
-            _buildDashboardButton(
-              context,
-              title: 'الأدوية البديلة',
-              icon: Icons.local_pharmacy,
-              screen: AlternativeMedicationsScreen(),
-            ),
-            _buildDashboardButton(
-              context,
-              title: 'التنبؤ ب مرض السكر',
-              icon: Icons.analytics,
-              screen: AIAnalysisScreen(),
-            ),
-            _buildDashboardButton(
-              context,
-              title: 'الملف الشخصي والإعدادات',
-              icon: Icons.person,
-              screen: ProfileSettingsScreen(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDashboardButton(BuildContext context, {required String title, required IconData icon, required Widget screen}) {
-    return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
-        },
+        padding: const EdgeInsets.all(12.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Colors.blue),
-            SizedBox(height: 10),
-            Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (_showWelcomeMessage)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Text(
+                  'مرحبًا بك في تطبيق إدارة مرض السكري',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                ),
+              ),
+            const Expanded(child: DashboardGrid()),
           ],
         ),
       ),
     );
   }
 }
+
+class DashboardGrid extends StatelessWidget {
+  const DashboardGrid({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 1, // عنصر واحد في كل صف
+        crossAxisSpacing: 12, // المسافة بين العناصر في الاتجاه الأفقي
+        mainAxisSpacing: 12, // المسافة بين العناصر في الاتجاه الرأسي
+        childAspectRatio: 1.8, // زيادة النسبة لجعل البوكسات أكبر
+      ),
+      itemCount: _dashboardItems.length,
+      itemBuilder: (context, index) {
+        final item = _dashboardItems[index];
+        return _buildDashboardButton(
+          context,
+          title: item['title'],
+          imagePath: item['imagePath'],
+          screen: item['screen'],
+        );
+      },
+    );
+  }
+
+  static Widget _buildDashboardButton(BuildContext context, {
+    required String title,
+    required String imagePath,
+    required Widget screen,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => screen),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      splashColor: Colors.blue.withOpacity(0.2),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.contain,
+                    height: 80, // زيادة حجم الصور
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10.0),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 22, // زيادة حجم النصوص
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final List<Map<String, dynamic>> _dashboardItems = [
+  {
+    'title': 'تتبع مستوى السكر',
+    'imagePath': 'assets/images/glucose_tracking.png.webp',
+    'screen': GlucoseTrackingScreen(),
+  },
+  {
+    'title': 'التذكيرات',
+    'imagePath': 'assets/images/reminders.png.webp',
+    'screen': RemindersScreen(),
+  },
+  {
+    'title': 'الشات بوت',
+    'imagePath': 'assets/images/chatbot.png.webp',
+    'screen': ChatbotScreen(),
+  },
+  {
+    'title': 'الأدوية البديلة',
+    'imagePath': 'assets/images/medications.png.webp',
+    'screen': AlternativeMedicationsScreen(),
+  },
+  {
+    'title': 'التنبؤ بمرض السكر',
+    'imagePath': 'assets/images/ai_analysis.png.webp',
+    'screen': AIAnalysisScreen(),
+  },
+  {
+    'title': 'الملف الشخصي والإعدادات',
+    'imagePath': 'assets/images/profile.png.webp',
+    'screen': ProfileSettingsScreen(),
+  },
+];

@@ -1,4 +1,4 @@
-package com.example.diabetes_management_app
+package com.example.flutter_
 
 import io.flutter.embedding.android.FlutterActivity
 

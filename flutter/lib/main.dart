@@ -21,7 +21,45 @@ class DiabetesApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Diabetes Management',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primaryColor: Colors.blue[600],
+        scaffoldBackgroundColor: Colors.blue[50],
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(fontSize: 16, color: Colors.black87),
+          bodyMedium: TextStyle(fontSize: 14, color: Colors.black54),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.blue[700],
+          elevation: 0,
+          titleTextStyle: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        buttonTheme: ButtonThemeData(
+          buttonColor: Colors.blue[600],
+          textTheme: ButtonTextTheme.primary,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue[600],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.blueGrey.shade300, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
+        ),
       ),
       initialRoute: '/',
       routes: {
@@ -32,9 +70,17 @@ class DiabetesApp extends StatelessWidget {
         '/ai_analysis': (context) => AIAnalysisScreen(),
         '/profile_settings': (context) => ProfileSettingsScreen(),
         '/forgot_password': (context) => ForgotPasswordScreen(),
-        '/sign_up': (context) => SignUpScreen(),
         '/chatbot': (context) => ChatbotScreen(),
         '/alternative_medications': (context) => AlternativeMedicationsScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/sign_up') {
+          final role = settings.arguments as String?;
+          return MaterialPageRoute(
+            builder: (context) => SignUpScreen(role: role ?? 'مريض'),
+          );
+        }
+        return null;
       },
     );
   }

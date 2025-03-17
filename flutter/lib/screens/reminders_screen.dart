@@ -81,6 +81,15 @@ class _RemindersScreenState extends State<RemindersScreen> {
     }
   }
 
+  void _deleteReminder(int index) {
+    setState(() {
+      reminders.removeAt(index);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('تم حذف التذكير بنجاح!')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,9 +131,16 @@ class _RemindersScreenState extends State<RemindersScreen> {
               child: ListView.builder(
                 itemCount: reminders.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: Icon(Icons.notifications, color: Colors.blue),
-                    title: Text(reminders[index]),
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 5),
+                    child: ListTile(
+                      leading: Icon(Icons.notifications, color: Colors.blue),
+                      title: Text(reminders[index]),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteReminder(index),
+                      ),
+                    ),
                   );
                 },
               ),

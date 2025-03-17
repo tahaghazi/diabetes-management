@@ -6,7 +6,7 @@ class AlternativeMedicationsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('الأدوية البديلة')),
       body: Center(
-        child: Text('قريبا بردو.'),
+        child: Text('.'),
       ),
     );
   }

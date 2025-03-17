@@ -6,7 +6,7 @@ class ChatbotScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('الشات بوت')),
       body: Center(
-        child: Text('قريبا'),
+        child: Text('.'),
       ),
     );
   }
