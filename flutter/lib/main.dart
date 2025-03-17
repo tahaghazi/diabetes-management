@@ -9,6 +9,7 @@ import 'screens/ai_analysis_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/alternative_medications_screen.dart';
+import 'screens/account_type_screen.dart'; // تم إضافة شاشة اختيار نوع الحساب
 
 void main() {
   runApp(DiabetesApp());
@@ -72,12 +73,13 @@ class DiabetesApp extends StatelessWidget {
         '/forgot_password': (context) => ForgotPasswordScreen(),
         '/chatbot': (context) => ChatbotScreen(),
         '/alternative_medications': (context) => AlternativeMedicationsScreen(),
+        '/account_type': (context) => AccountTypeScreen(), // إضافة مسار لشاشة اختيار نوع الحساب
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/sign_up') {
-          final role = settings.arguments as String?;
+          final role = settings.arguments as String? ?? 'مريض';
           return MaterialPageRoute(
-            builder: (context) => SignUpScreen(role: role ?? 'مريض'),
+            builder: (context) => SignUpScreen(accountType: role),
           );
         }
         return null;

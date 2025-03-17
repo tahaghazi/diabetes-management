@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
+import 'account_type_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -104,10 +105,13 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/sign_up');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AccountTypeScreen()),
+                );
               },
               child: Text("ليس لديك حساب؟ إنشاء حساب"),
-            ),
+             ),
           ],
         ),
       ),
