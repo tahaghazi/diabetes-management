@@ -17,5 +17,5 @@ A smart and user-friendly mobile application designed to assist individuals in m
 ## 📌 Setup Instructions  
 1. **Clone the repository:**  
    ```sh
-   git clone https://github.com/your-repo/diabetes-management.git
+   git clone https://github.com/mohamedmostafa33/diabetes-management.git
    cd diabetes-management
