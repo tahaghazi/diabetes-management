@@ -6,7 +6,7 @@ class AIAnalysisScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('التنبؤ ب مرض السكر')),
       body: Center(
-        child: Text('لسه '),
+        child: Text('. '),
       ),
     );
   }
