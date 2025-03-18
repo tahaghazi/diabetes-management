@@ -35,9 +35,9 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
           children: [
             Text('اختر نوع الحساب الخاص بك', textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 20),
-            _buildAccountTypeOption('مريض', 'patient'),
+            _buildAccountTypeOption('مريض', 'patient', 'assets/images/patient_logo.png.webp'),
             SizedBox(height: 10),
-            _buildAccountTypeOption('دكتور', 'doctor'),
+            _buildAccountTypeOption('دكتور', 'doctor', 'assets/images/doctor_logo.png.webp'),
             SizedBox(height: 30),
             ElevatedButton(
               onPressed: _navigateToSignUp,
@@ -49,7 +49,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
     );
   }
 
-  Widget _buildAccountTypeOption(String title, String value) {
+  Widget _buildAccountTypeOption(String title, String value, String imagePath) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -63,7 +63,13 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
           border: Border.all(color: _selectedAccountType == value ? Colors.blue : Colors.grey, width: 2),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _selectedAccountType == value ? Colors.blue : Colors.black)),
+        child: Column(
+          children: [
+            Image.asset(imagePath, height: 80),
+            SizedBox(height: 10),
+            Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _selectedAccountType == value ? Colors.blue : Colors.black)),
+          ],
+        ),
       ),
     );
   }
