@@ -39,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
+    // Validate the input
     if (email.isEmpty || password.isEmpty) {
       _showSnackBar('يرجى إدخال البريد الإلكتروني وكلمة المرور', Colors.red);
       return;
@@ -61,7 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
         body: jsonEncode({'email': email, 'password': password}),
       );
 
-      // التأكد من الـ decoding بـ UTF-8
       var data = jsonDecode(utf8.decode(response.bodyBytes));
 
       print("Response Status Code: ${response.statusCode}");
@@ -80,11 +80,24 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (context) => DashboardScreen()),
         );
+      } else if (response.statusCode == 401 || response.statusCode == 400) {
+        // ❌ كلمة المرور أو البريد الإلكتروني غير صحيحة
+        _showSnackBar('كلمة المرور أو البريد الإلكتروني غير صحيحة', Colors.red);
+      } else if (response.statusCode == 404) {
+        // ❌ البريد الإلكتروني غير مسجل
+        _showSnackBar('البريد الإلكتروني غير موجود أو غير مسجل', Colors.red);
+      } else if (response.statusCode == 500) {
+        // ⚠️ السيرفر فيه مشكلة
+        _showSnackBar('حدث خطأ في الخادم، حاول لاحقًا', Colors.red);
+      } else if (response.statusCode == 503) {
+        // ⚠️ الخادم غير متاح
+        _showSnackBar('الخادم غير متاح الآن، حاول لاحقًا', Colors.red);
       } else {
-        String errorMessage = data['error'] ?? 'فشل تسجيل الدخول: خطأ غير معروف';
-        _showSnackBar(errorMessage, Colors.red);
+        // ⚠️ حالة غير معروفة
+        _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
       }
     } catch (e) {
+      // ❌ حدث خطأ في الاتصال بالخادم
       _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
       print("Error: $e");
     }
