@@ -16,7 +16,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _showWelcomeMessage = true;
-  String? _username;
+  String? _firstName;
+  String? _lastName;
   String? _email;
 
   @override
@@ -35,7 +36,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _username = prefs.getString('user_email')?.split('@')[0]; // اسم المستخدم من الإيميل
+      _firstName = prefs.getString('first_name');
+      _lastName = prefs.getString('last_name');
       _email = prefs.getString('user_email');
     });
   }
@@ -55,16 +57,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.person, color: Colors.white),
             onSelected: (value) {
               if (value == 'logout') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
-                );
+                SharedPreferences.getInstance().then((prefs) {
+                  prefs.clear(); // مسح كل البيانات عند الخروج
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => LoginScreen()),
+                  );
+                });
               }
             },
             itemBuilder: (BuildContext context) => [
               PopupMenuItem<String>(
-                enabled: false, // اسم المستخدم مش قابل للضغط
+                enabled: false, // الاسم الكامل مش قابل للضغط
                 child: Text(
-                  _username ?? 'اسم المستخدم',
+                  '${_firstName ?? 'الاسم'} ${_lastName ?? 'الأخير'}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),

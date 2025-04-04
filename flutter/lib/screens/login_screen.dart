@@ -17,18 +17,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   final http.Client _client = http.Client();
 
-  // متغير للـ API URL عشان يسهل التعديل
-  final String _apiUrl = 'http://127.0.0.1:8000/api/login/'; // غير ده لما تعمل deploy
+  final String _apiUrl = 'http://127.0.0.1:8000/api/login/'; 
 
   bool isValidEmail(String email) {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
         .hasMatch(email);
   }
 
-  Future<void> _saveSession(String email, String accountType) async {
+  Future<void> _saveSession(String email, String accountType, String firstName, String lastName) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_email', email);
     await prefs.setString('account_type', accountType);
+    await prefs.setString('first_name', firstName);
+    await prefs.setString('last_name', lastName);
   }
 
   Future<void> _login() async {
@@ -64,7 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         String accountType = data['user']['account_type'];
-        await _saveSession(email, accountType);
+        String firstName = data['user']['first_name'];
+        String lastName = data['user']['last_name'];
+        await _saveSession(email, accountType, firstName, lastName);
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 
         // توجيه المستخدم لـ DashboardScreen دايماً
@@ -74,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         // تحسين الـ error handling بإضافة fallback
-        String errorMessage = data['message'] ?? 'فشل تسجيل الدخول: خطأ غير معروف';
+        String errorMessage = data['error'] ?? 'فشل تسجيل الدخول: خطأ غير معروف';
         _showSnackBar(errorMessage, Colors.red);
       }
     } catch (e) {

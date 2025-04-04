@@ -18,11 +18,15 @@ def user_register(request):
     serializer = UserRegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        profile = user.patientprofile if hasattr(user, 'patientprofile') else user.doctorprofile
         return Response({
             "message": "User registered successfully!",
             "user": {
                 "id": user.id,
-                "email": user.email
+                "email": user.email,
+                "first_name": profile.first_name,
+                "last_name": profile.last_name,
+                "account_type": request.data['account_type']  
             }
         }, status=status.HTTP_201_CREATED)
     
@@ -37,16 +41,24 @@ def user_login(request):
         login(request, user)
 
         account_type = "unknown"
+        first_name = ""
+        last_name = ""
         if hasattr(user, 'patientprofile'):
             account_type = 'patient'
+            first_name = user.patientprofile.first_name
+            last_name = user.patientprofile.last_name
         elif hasattr(user, 'doctorprofile'):
             account_type = 'doctor'
+            first_name = user.doctorprofile.first_name
+            last_name = user.doctorprofile.last_name
 
         return Response({
             "message": "Login successful!",
             "user": {
                 "id": user.id,
                 "email": user.email,
+                "first_name": first_name,
+                "last_name": last_name,
                 "account_type": account_type
             }
         }, status=status.HTTP_200_OK)
