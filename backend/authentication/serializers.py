@@ -9,10 +9,11 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     account_type = serializers.ChoiceField(choices=[('patient', 'Patient'), ('doctor', 'Doctor')])
     first_name = serializers.CharField(max_length=100)  
     last_name = serializers.CharField(max_length=100)   
+    specialization = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ['email', 'password1', 'password2', 'account_type', 'first_name', 'last_name']
+        fields = ['email', 'password1', 'password2', 'account_type', 'first_name', 'last_name', 'specialization']
 
     def validate(self, data):
         data['email'] = data['email'].lower()  
@@ -21,6 +22,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         
         if User.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError({"email": "This email is already in use."})
+        
+        if data['account_type'] == 'doctor' and not data.get('specialization'):
+            raise serializers.ValidationError({"specialization": "Specialization is required for doctors."})
 
         return data
 
@@ -28,7 +32,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('password2')
         account_type = validated_data.pop('account_type')
         first_name = validated_data.pop('first_name')  
-        last_name = validated_data.pop('last_name')    
+        last_name = validated_data.pop('last_name')   
+        specialization = validated_data.pop('specialization', '') 
         
         user = User.objects.create_user(
             username=validated_data['email'], 
@@ -39,7 +44,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         if account_type == 'patient':
             PatientProfile.objects.create(user=user, first_name=first_name, last_name=last_name)
         elif account_type == 'doctor':
-            DoctorProfile.objects.create(user=user, first_name=first_name, last_name=last_name)
+            DoctorProfile.objects.create(user=user, first_name=first_name, last_name=last_name, specialization=specialization)
 
         return user
 

@@ -17,19 +17,22 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   final http.Client _client = http.Client();
 
-  final String _apiUrl = 'http://127.0.0.1:8000/api/login/'; 
+  final String _apiUrl = 'http://127.0.0.1:8000/api/login/';
 
   bool isValidEmail(String email) {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
         .hasMatch(email);
   }
 
-  Future<void> _saveSession(String email, String accountType, String firstName, String lastName) async {
+  Future<void> _saveSession(String email, String accountType, String firstName, String lastName, {String? specialization}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_email', email);
     await prefs.setString('account_type', accountType);
     await prefs.setString('first_name', firstName);
     await prefs.setString('last_name', lastName);
+    if (specialization != null) {
+      await prefs.setString('specialization', specialization);
+    }
   }
 
   Future<void> _login() async {
@@ -54,29 +57,30 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       var response = await _client.post(
         Uri.parse(_apiUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
         body: jsonEncode({'email': email, 'password': password}),
       );
 
+      // التأكد من الـ decoding بـ UTF-8
+      var data = jsonDecode(utf8.decode(response.bodyBytes));
+
       print("Response Status Code: ${response.statusCode}");
       print("Response Body: ${response.body}");
-
-      var data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
         String accountType = data['user']['account_type'];
         String firstName = data['user']['first_name'];
         String lastName = data['user']['last_name'];
-        await _saveSession(email, accountType, firstName, lastName);
+        String? specialization = data['user']['specialization'];
+
+        await _saveSession(email, accountType, firstName, lastName, specialization: specialization);
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 
-        // توجيه المستخدم لـ DashboardScreen دايماً
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => DashboardScreen()),
         );
       } else {
-        // تحسين الـ error handling بإضافة fallback
         String errorMessage = data['error'] ?? 'فشل تسجيل الدخول: خطأ غير معروف';
         _showSnackBar(errorMessage, Colors.red);
       }

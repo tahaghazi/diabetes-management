@@ -43,6 +43,7 @@ def user_login(request):
         account_type = "unknown"
         first_name = ""
         last_name = ""
+        specialization = ""
         if hasattr(user, 'patientprofile'):
             account_type = 'patient'
             first_name = user.patientprofile.first_name
@@ -51,8 +52,9 @@ def user_login(request):
             account_type = 'doctor'
             first_name = user.doctorprofile.first_name
             last_name = user.doctorprofile.last_name
+            specialization = user.doctorprofile.specialization
 
-        return Response({
+        response_data = {
             "message": "Login successful!",
             "user": {
                 "id": user.id,
@@ -61,7 +63,11 @@ def user_login(request):
                 "last_name": last_name,
                 "account_type": account_type
             }
-        }, status=status.HTTP_200_OK)
+        }
+        if account_type == 'doctor':
+            response_data['user']['specialization'] = specialization
+
+        return Response(response_data, status=status.HTTP_200_OK, content_type='application/json; charset=utf-8')
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

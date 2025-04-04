@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -19,6 +19,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _specializationController = TextEditingController();
   bool _isLoading = false;
 
   Future<void> _register() async {
@@ -30,27 +31,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       var url = Uri.parse('http://127.0.0.1:8000/api/register/');
+      var requestBody = {
+        'email': _emailController.text.trim(),
+        'password1': _passwordController.text.trim(),
+        'password2': _confirmPasswordController.text.trim(),
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'account_type': widget.accountType,
+      };
+
+      if (widget.accountType == 'doctor') {
+        requestBody['specialization'] = _specializationController.text.trim();
+      }
+
       var response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailController.text.trim(),
-          'password1': _passwordController.text.trim(),
-          'password2': _confirmPasswordController.text.trim(),
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'account_type': widget.accountType,
-        }),
+        body: jsonEncode(requestBody),
       );
 
       var responseData = jsonDecode(response.body);
       if (response.statusCode == 201) {
-        // حفظ البيانات في SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_email', _emailController.text.trim());
         await prefs.setString('account_type', widget.accountType);
         await prefs.setString('first_name', _firstNameController.text.trim());
         await prefs.setString('last_name', _lastNameController.text.trim());
+        if (widget.accountType == 'doctor') {
+          await prefs.setString('specialization', _specializationController.text.trim());
+        }
 
         _showSnackBar('تم إنشاء الحساب بنجاح', Colors.green);
         Navigator.pushReplacementNamed(context, '/dashboard');
@@ -102,6 +111,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 SizedBox(height: 10),
+                if (widget.accountType == 'doctor')
+                  Column(
+                    children: [
+                      TextFormField(
+                        controller: _specializationController,
+                        decoration: InputDecoration(labelText: 'التخصص'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'يرجى إدخال التخصص';
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                    ],
+                  ),
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(labelText: 'البريد الإلكتروني'),

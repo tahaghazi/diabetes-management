@@ -19,6 +19,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _firstName;
   String? _lastName;
   String? _email;
+  String? _accountType;
+  String? _specialization;
 
   @override
   void initState() {
@@ -39,6 +41,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _firstName = prefs.getString('first_name');
       _lastName = prefs.getString('last_name');
       _email = prefs.getString('user_email');
+      _accountType = prefs.getString('account_type');
+      _specialization = prefs.getString('specialization');
     });
   }
 
@@ -67,16 +71,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             itemBuilder: (BuildContext context) => [
               PopupMenuItem<String>(
-                enabled: false, // الاسم الكامل مش قابل للضغط
+                enabled: false,
                 child: Text(
                   '${_firstName ?? 'الاسم'} ${_lastName ?? 'الأخير'}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               PopupMenuItem<String>(
-                enabled: false, // الإيميل مش قابل للضغط
+                enabled: false,
                 child: Text(_email ?? 'الإيميل'),
               ),
+              if (_accountType == 'doctor')
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'التخصص : ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: _specialization ?? 'غير محدد',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               const PopupMenuItem<String>(
                 value: 'logout',
                 child: Text('تسجيل الخروج'),
@@ -131,11 +152,11 @@ class DashboardGrid extends StatelessWidget {
   }
 
   static Widget _buildDashboardButton(
-      BuildContext context, {
-        required String title,
-        required String imagePath,
-        required Widget screen,
-      }) {
+    BuildContext context, {
+    required String title,
+    required String imagePath,
+    required Widget screen,
+  }) {
     return InkWell(
       onTap: () {
         Navigator.push(
