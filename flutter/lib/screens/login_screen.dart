@@ -17,6 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   final http.Client _client = http.Client();
 
+  // متغير للـ API URL عشان يسهل التعديل
+  final String _apiUrl = 'http://127.0.0.1:8000/api/login/'; // غير ده لما تعمل deploy
+
   bool isValidEmail(String email) {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
         .hasMatch(email);
@@ -49,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       var response = await _client.post(
-        Uri.parse('http://127.0.0.1:8000/api/login/'),
+        Uri.parse(_apiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -64,20 +67,15 @@ class _LoginScreenState extends State<LoginScreen> {
         await _saveSession(email, accountType);
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 
-        // ✅ توجيه المستخدم بناءً على نوع الحساب
-        if (accountType == 'doctor') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => DashboardScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => AccountTypeScreen()),
-          );
-        }
+        // توجيه المستخدم لـ DashboardScreen دايماً
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardScreen()),
+        );
       } else {
-        _showSnackBar('فشل تسجيل الدخول: ${data['message']}', Colors.red);
+        // تحسين الـ error handling بإضافة fallback
+        String errorMessage = data['message'] ?? 'فشل تسجيل الدخول: خطأ غير معروف';
+        _showSnackBar(errorMessage, Colors.red);
       }
     } catch (e) {
       _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
