@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'glucose_tracking_screen.dart';
 import 'reminders_screen.dart';
 import 'chatbot_screen.dart';
 import 'alternative_medications_screen.dart';
 import 'ai_analysis_screen.dart';
-import 'profile_settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -16,16 +16,27 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _showWelcomeMessage = true;
+  String? _username;
+  String? _email;
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _showWelcomeMessage = false;
         });
       }
+    });
+  }
+
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('user_email')?.split('@')[0]; // اسم المستخدم من الإيميل
+      _email = prefs.getString('user_email');
     });
   }
 
@@ -40,13 +51,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
         centerTitle: true,
         backgroundColor: Colors.blue,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => LoginScreen()),
-              );
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.person, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'logout') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                );
+              }
             },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                enabled: false, // اسم المستخدم مش قابل للضغط
+                child: Text(
+                  _username ?? 'اسم المستخدم',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              PopupMenuItem<String>(
+                enabled: false, // الإيميل مش قابل للضغط
+                child: Text(_email ?? 'الإيميل'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('تسجيل الخروج'),
+              ),
+            ],
           ),
         ],
       ),
@@ -55,8 +85,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: [
             if (_showWelcomeMessage)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 20),
                 child: Text(
                   'مرحبًا بك في تطبيق إدارة مرض السكري',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
@@ -77,10 +107,10 @@ class DashboardGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1, // عنصر واحد في كل صف
-        crossAxisSpacing: 12, // المسافة بين العناصر في الاتجاه الأفقي
-        mainAxisSpacing: 12, // المسافة بين العناصر في الاتجاه الرأسي
-        childAspectRatio: 1.8, // زيادة النسبة لجعل البوكسات أكبر
+        crossAxisCount: 1,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.8,
       ),
       itemCount: _dashboardItems.length,
       itemBuilder: (context, index) {
@@ -95,11 +125,12 @@ class DashboardGrid extends StatelessWidget {
     );
   }
 
-  static Widget _buildDashboardButton(BuildContext context, {
-    required String title,
-    required String imagePath,
-    required Widget screen,
-  }) {
+  static Widget _buildDashboardButton(
+      BuildContext context, {
+        required String title,
+        required String imagePath,
+        required Widget screen,
+      }) {
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -134,7 +165,7 @@ class DashboardGrid extends StatelessWidget {
                   child: Image.asset(
                     imagePath,
                     fit: BoxFit.contain,
-                    height: 80, // زيادة حجم الصور
+                    height: 80,
                   ),
                 ),
               ),
@@ -144,7 +175,7 @@ class DashboardGrid extends StatelessWidget {
                   title,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 22, // زيادة حجم النصوص
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
@@ -183,10 +214,5 @@ final List<Map<String, dynamic>> _dashboardItems = [
     'title': 'التنبؤ بمرض السكر',
     'imagePath': 'assets/images/ai_analysis.png.webp',
     'screen': AIAnalysisScreen(),
-  },
-  {
-    'title': 'الملف الشخصي والإعدادات',
-    'imagePath': 'assets/images/profile.png.webp',
-    'screen': ProfileSettingsScreen(),
   },
 ];
