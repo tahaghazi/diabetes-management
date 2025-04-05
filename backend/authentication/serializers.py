@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from profiles.models import PatientProfile, DoctorProfile
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password1 = serializers.CharField(write_only=True, min_length=8)
@@ -53,7 +54,7 @@ class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        email = data.get('email').lower()  
+        email = data.get('email').lower()
         password = data.get('password')
 
         try:
@@ -61,7 +62,7 @@ class UserLoginSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError({"error": "Invalid email or password."})
 
-        user = authenticate(username=user.username, password=password)  
+        user = authenticate(username=user.username, password=password)
         if not user:
             raise serializers.ValidationError({"error": "Invalid email or password."})
         
@@ -72,6 +73,9 @@ class UserLoginSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError({"error": "User profile is not set correctly."})
 
+        refresh = RefreshToken.for_user(user)
+        data['refresh'] = str(refresh)
+        data['access'] = str(refresh.access_token)
         data['user'] = user
         data['account_type'] = account_type
         

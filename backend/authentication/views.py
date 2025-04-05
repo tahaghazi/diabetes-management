@@ -1,15 +1,14 @@
-from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.core.mail import send_mail
-from django.contrib.auth import login, logout, get_user_model
-from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import UserRegisterSerializer, UserLoginSerializer
+from django.contrib.auth.tokens import default_token_generator 
 
 User = get_user_model()
 
@@ -38,24 +37,25 @@ def user_login(request):
     
     if serializer.is_valid():
         user = serializer.validated_data['user']
-        login(request, user)
+        refresh = serializer.validated_data['refresh']
+        access = serializer.validated_data['access']
 
-        account_type = "unknown"
+        account_type = serializer.validated_data['account_type']
         first_name = ""
         last_name = ""
         specialization = ""
-        if hasattr(user, 'patientprofile'):
-            account_type = 'patient'
+        if account_type == 'patient':
             first_name = user.patientprofile.first_name
             last_name = user.patientprofile.last_name
-        elif hasattr(user, 'doctorprofile'):
-            account_type = 'doctor'
+        elif account_type == 'doctor':
             first_name = user.doctorprofile.first_name
             last_name = user.doctorprofile.last_name
             specialization = user.doctorprofile.specialization
 
         response_data = {
             "message": "Login successful!",
+            "refresh": refresh, 
+            "access": access,    
             "user": {
                 "id": user.id,
                 "email": user.email,
@@ -74,11 +74,7 @@ def user_login(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def user_logout(request):
-    logout(request)
-    response = Response({"message": "Logout Successful!"}, status=status.HTTP_200_OK)
-    response.delete_cookie("sessionid")
-    response.delete_cookie("csrftoken")
-    return response
+    return Response({"message": "Logout Successful!"}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def send_reset_password_email(request):
@@ -91,7 +87,7 @@ def send_reset_password_email(request):
     
     token = default_token_generator.make_token(user)
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-    reset_url = f"diabetesApp://reset-password/{uidb64}/{token}"
+    reset_url = f"diabetesApp://reset-password/{uidb64}/{token}/"
 
     send_mail(
         subject="Reset Your Password",
