@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'login_screen.dart';
 import 'glucose_tracking_screen.dart';
 import 'reminders_screen.dart';
@@ -46,13 +47,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  Future<void> _logout() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      print('Token being sent: $token');
+
+      if (token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تسجيل الخروج')),
+        );
+        await prefs.clear();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/api/logout/'),
+        headers: {
+          'Authorization': 'Token $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Response Status: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await prefs.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تسجيل الخروج بنجاح')),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء تسجيل الخروج: $e')),
+      );
+    }
+  }
+
   Widget _buildDrawerItem(BuildContext context, String title, IconData icon, Widget? screen, {bool isLogout = false}) {
     return ListTile(
       leading: Icon(icon, color: isLogout ? Colors.red : Colors.blue, size: 30),
       title: Text(title, style: TextStyle(color: isLogout ? Colors.red : Colors.black, fontSize: 18)),
       onTap: () {
         if (isLogout) {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+          _logout();
         } else {
           Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
         }
@@ -186,9 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               leading: const Icon(Icons.logout, color: Colors.red, size: 30),
               title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontSize: 18)),
               onTap: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
-                Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+                await _logout();
               },
             ),
           ],
@@ -200,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             if (_showWelcomeMessage)
               const Padding(
-                padding: EdgeInsets.only(bottom: 20), // يجب تصحيحه إلى bottom: 20
+                padding: EdgeInsets.only(bottom: 20),
                 child: Text(
                   'مرحبًا بك في تطبيق إدارة مرض السكري',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
