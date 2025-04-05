@@ -9,23 +9,31 @@ from rest_framework.permissions import IsAuthenticated
 def update_profile(request):
     user = request.user
 
-    if hasattr(user, 'patientprofile'):
-        profile = user.patientprofile
-        serializer = PatientProfileUpdateSerializer(profile, data=request.data, partial=True)
-    elif hasattr(user, 'doctorprofile'):
-        profile = user.doctorprofile
-        serializer = DoctorProfileUpdateSerializer(profile, data=request.data, partial=True)
-    else:
-        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-    if serializer.is_valid():
-        serializer.save()
+    try:
+        if hasattr(user, 'patientprofile'):
+            profile = user.patientprofile
+            serializer = PatientProfileUpdateSerializer(profile, data=request.data, partial=True)
+            profile_type = "patient"
+        elif hasattr(user, 'doctorprofile'):
+            profile = user.doctorprofile
+            serializer = DoctorProfileUpdateSerializer(profile, data=request.data, partial=True)
+            profile_type = "doctor"
+        else:
+            return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": f"{profile_type.capitalize()} profile updated successfully!",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        
         return Response({
-            "message": "Profile updated successfully!",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-    
-    return Response({
-        "message": "Invalid data",
-        "errors": serializer.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
+            "message": "Invalid data",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({
+            "error": f"An error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
