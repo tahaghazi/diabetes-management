@@ -21,38 +21,44 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? _uidb64;
   String? _token;
 
+  late AppLinks _appLinks;
+
   @override
   void initState() {
     super.initState();
-    _getDeepLink();
+    _setupAppLinks();
   }
 
-  // هذه الدالة لاستقبال الرابط
-  Future<void> _getDeepLink() async {
-    final appLink = await AppLinks().getInitialAppLink();
-    if (appLink != null) {
-      Uri uri = Uri.parse(appLink);
-      setState(() {
-        _uidb64 = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
-        _token = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
-      });
+  void _setupAppLinks() async {
+    _appLinks = AppLinks(
+      onAppLink: (Uri? uri, String? link) {
+        if (uri != null) {
+          _handleUri(uri);
+        }
+      },
+    );
+
+    final initialLink = await _appLinks.getInitialAppLink();
+    if (initialLink != null) {
+      _handleUri(initialLink);
     }
 
-    // التحقق من وجود رابط جديد أثناء استخدام التطبيق
-    final latestAppLink = await AppLinks().getLatestAppLink();
-    if (latestAppLink != null) {
-      Uri uri = Uri.parse(latestAppLink);
-      setState(() {
-        _uidb64 = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
-        _token = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
-      });
+    final latestLink = await _appLinks.getLatestAppLink();
+    if (latestLink != null) {
+      _handleUri(latestLink);
     }
   }
 
-  // هذه الدالة لإرسال الطلب إلى الـ API
+  void _handleUri(Uri uri) {
+    setState(() {
+      _uidb64 = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
+      _token = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+    });
+  }
+
   Future<void> _resetPassword() async {
     if (_uidb64 != null && _token != null) {
-      final url = 'http://127.0.0.1:8000/api/password_reset/confirm/$_uidb64/$_token/'; // تعديل هنا
+      final url = 'http://127.0.0.1:8000/api/password_reset/confirm/$_uidb64/$_token/';
       final response = await http.post(
         Uri.parse(url),
         headers: {
