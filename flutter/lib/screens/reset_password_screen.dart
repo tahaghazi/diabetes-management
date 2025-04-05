@@ -1,4 +1,7 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({Key? key}) : super(key: key);
@@ -15,11 +18,58 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _isObscure1 = true;
   bool _isObscure2 = true;
 
+  String? _uidb64;
+  String? _token;
+
+  @override
+  void initState() {
+    super.initState();
+    _getDeepLink();
+  }
+
+  // هذه الدالة لاستقبال الرابط
+  Future<void> _getDeepLink() async {
+    final appLink = await AppLinks().getInitialAppLink();
+    if (appLink != null) {
+      Uri uri = Uri.parse(appLink);
+      setState(() {
+        _uidb64 = uri.pathSegments.length > 0 ? uri.pathSegments[0] : null;
+        _token = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+      });
+    }
+  }
+
+  // هذه الدالة لإرسال الطلب إلى الـ API
+  Future<void> _resetPassword() async {
+    if (_uidb64 != null && _token != null) {
+      final url = 'http://127.0.0.1:8000/api/password_reset/confirm/$uidb64/$token/';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'new_password': _newPasswordController.text,
+          'confirm_new_password': _confirmPasswordController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إعادة تعيين كلمة المرور بنجاح')),
+        );
+      } else {
+        final responseBody = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(responseBody['error'] ?? 'حدث خطأ')),
+        );
+      }
+    }
+  }
+
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إعادة تعيين كلمة المرور بنجاح')),
-      );
+      _resetPassword();
     }
   }
 
