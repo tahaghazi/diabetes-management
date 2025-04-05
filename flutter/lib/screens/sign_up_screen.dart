@@ -22,6 +22,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _specializationController = TextEditingController();
   bool _isLoading = false;
 
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -137,8 +140,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 10),
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(labelText: 'كلمة المرور'),
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'كلمة المرور',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                     if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
@@ -148,8 +163,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 10),
                 TextFormField(
                   controller: _confirmPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(labelText: 'تأكيد كلمة المرور'),
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: 'تأكيد كلمة المرور',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى تأكيد كلمة المرور';
                     if (value != _passwordController.text) return 'كلمتا المرور غير متطابقتين';
