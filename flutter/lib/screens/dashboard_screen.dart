@@ -46,79 +46,171 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, Widget? screen, {bool isLogout = false}) {
+    return ListTile(
+      leading: Icon(icon, color: isLogout ? Colors.red : Colors.blue, size: 30),
+      title: Text(title, style: TextStyle(color: isLogout ? Colors.red : Colors.black, fontSize: 18)),
+      onTap: () {
+        if (isLogout) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+        } else {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
+        }
+      },
+    );
+  }
+
+  Widget _buildDashboardButton(BuildContext context, {required String title, required String imagePath, required Widget screen}) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => screen),
+        );
+      },
+      child: Card(
+        elevation: 4.0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Image.asset(
+                  imagePath,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                ),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'الصفحة الرئيسية',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: Colors.blue,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.person, color: Colors.white),
-            onSelected: (value) {
-              if (value == 'logout') {
-                SharedPreferences.getInstance().then((prefs) {
-                  prefs.clear(); // مسح كل البيانات عند الخروج
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => LoginScreen()),
-                  );
-                });
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              PopupMenuItem<String>(
-                enabled: false,
-                child: Text(
-                  '${_firstName ?? 'الاسم'} ${_lastName ?? 'الأخير'}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Container(
+              height: 280,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue, Colors.blueAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              PopupMenuItem<String>(
-                enabled: false,
-                child: Text(_email ?? 'الإيميل'),
-              ),
-              if (_accountType == 'doctor')
-                PopupMenuItem<String>(
-                  enabled: false,
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: 'التخصص : ',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextSpan(
-                          text: _specialization ?? 'غير محدد',
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
+                    child: Image.asset(
+                      _accountType == 'doctor' ? 'assets/images/doctor_logo.png.webp' : 'assets/images/patient_logo.png.webp',
+                      height: 80,
+                      width: 80,
+                    ),
                   ),
-                ),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Text('تسجيل الخروج'),
+                  const SizedBox(height: 20),
+                  Text(
+                    '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _email ?? 'الإيميل',
+                    style: const TextStyle(color: Colors.white70, fontSize: 18),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _accountType == 'doctor' ? 'دكتور' : 'مريض',
+                    style: const TextStyle(color: Colors.white70, fontSize: 18),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_accountType == 'doctor')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        'التخصص: ${_specialization ?? 'غير محدد'}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 18),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+            _buildDrawerItem(context, 'تتبع مستوى السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
+            _buildDrawerItem(context, 'التذكيرات', Icons.notifications, RemindersScreen()),
+            _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
+            _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
+            _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
+            const Divider(),
+            const Spacer(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red, size: 30),
+              title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontSize: 18)),
+              onTap: () async {
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+                Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+              },
+            ),
+          ],
+        ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             if (_showWelcomeMessage)
               const Padding(
-                padding: EdgeInsets.only(bottom: 20),
+                padding: EdgeInsets.only(bottom: 20), // يجب تصحيحه إلى bottom: 20
                 child: Text(
                   'مرحبًا بك في تطبيق إدارة مرض السكري',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
                 ),
               ),
-            const Expanded(child: DashboardGrid()),
+            Expanded(
+              child: DashboardGrid(
+                buildDashboardButton: _buildDashboardButton,
+              ),
+            ),
           ],
         ),
       ),
@@ -127,90 +219,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class DashboardGrid extends StatelessWidget {
-  const DashboardGrid({Key? key}) : super(key: key);
+  final Widget Function(BuildContext, {required String title, required String imagePath, required Widget screen}) buildDashboardButton;
+
+  const DashboardGrid({Key? key, required this.buildDashboardButton}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.8,
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
       ),
       itemCount: _dashboardItems.length,
       itemBuilder: (context, index) {
         final item = _dashboardItems[index];
-        return _buildDashboardButton(
+        return buildDashboardButton(
           context,
           title: item['title'],
           imagePath: item['imagePath'],
           screen: item['screen'],
         );
       },
-    );
-  }
-
-  static Widget _buildDashboardButton(
-    BuildContext context, {
-    required String title,
-    required String imagePath,
-    required Widget screen,
-  }) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => screen),
-        );
-      },
-      borderRadius: BorderRadius.circular(12),
-      splashColor: Colors.blue.withOpacity(0.2),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 5,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Image.asset(
-                    imagePath,
-                    fit: BoxFit.contain,
-                    height: 80,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10.0),
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
