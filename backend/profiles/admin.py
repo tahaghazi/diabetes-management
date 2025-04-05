@@ -3,7 +3,7 @@ from .models import PatientProfile, DoctorProfile
 from django.contrib.auth.models import User
 
 class PatientProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'first_name', 'last_name', 'age', 'medical_history']
+    list_display = ['user', 'first_name', 'last_name', 'medical_history']
     search_fields = ['user__email', 'first_name', 'last_name']
     
 class DoctorProfileAdmin(admin.ModelAdmin):
