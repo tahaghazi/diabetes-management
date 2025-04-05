@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ForgotPasswordScreen extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
@@ -8,7 +10,8 @@ class ForgotPasswordScreen extends StatelessWidget {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(email);
   }
 
-  void _resetPassword(BuildContext context) {
+  // إرسال طلب API لإعادة تعيين كلمة المرور
+  void _resetPassword(BuildContext context) async {
     String email = _emailController.text.trim();
 
     if (email.isEmpty) {
@@ -16,10 +19,25 @@ class ForgotPasswordScreen extends StatelessWidget {
     } else if (!isValidEmail(email)) {
       _showSnackBar(context, 'يرجى إدخال بريد إلكتروني صحيح', Colors.orange);
     } else {
-      _showSnackBar(context, 'تم إرسال رابط إعادة تعيين كلمة المرور!', Colors.green);
+      try {
+        var response = await http.post(
+          Uri.parse('http://127.0.0.1:8000/api/password_reset/'), // URL API
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'email': email}),
+        );
+
+        if (response.statusCode == 200) {
+          _showSnackBar(context, 'تم إرسال رابط إعادة تعيين كلمة المرور!', Colors.green);
+        } else {
+          _showSnackBar(context, 'حدث خطأ أثناء إرسال الرابط', Colors.red);
+        }
+      } catch (e) {
+        _showSnackBar(context, 'حدث خطأ في الاتصال بالخادم', Colors.red);
+      }
     }
   }
 
+  // دالة لعرض رسائل التنبيه
   void _showSnackBar(BuildContext context, String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
