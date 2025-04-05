@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Django REST Framework
     'rest_framework',
+    'rest_framework_simplejwt',
     # Corsheaders
     'corsheaders',
 
@@ -68,7 +69,7 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
 
