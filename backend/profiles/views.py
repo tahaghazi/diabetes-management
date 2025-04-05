@@ -16,11 +16,16 @@ def update_profile(request):
         profile = user.doctorprofile
         serializer = DoctorProfileUpdateSerializer(profile, data=request.data, partial=True)
     else:
-        return Response({"error" : "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
-    
+        return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
     
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({
+            "message": "Profile updated successfully!",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        "message": "Invalid data",
+        "errors": serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
