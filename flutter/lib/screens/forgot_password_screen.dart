@@ -42,9 +42,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         }
 
         if (response.statusCode == 200) {
-          _showSnackBar(context, 'تم إرسال رابط إعادة تعيين كلمة المرور!', Colors.green);
+          _showSnackBar(context, ' تم إرسال الكود بنجاح علي الايميل !', Colors.green);
         } else {
-          _showSnackBar(context, 'حدث خطأ أثناء إرسال الرابط', Colors.red);
+          _showSnackBar(context, 'حدث خطأ أثناء إرسال الكود', Colors.red);
         }
       } catch (e) {
         _showSnackBar(context, 'حدث خطأ في الاتصال بالخادم', Colors.red);

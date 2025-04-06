@@ -12,11 +12,13 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _codeController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isObscure1 = true;
   bool _isObscure2 = true;
+  bool _codeVerified = false;
 
   String? _uidb64;
   String? _token;
@@ -56,7 +58,32 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
   }
 
+  Future<void> _verifyCode() async {
+    if (_codeController.text.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الكود يجب أن يكون 6 أرقام')),
+      );
+      return;
+    }
+
+    // Here you would typically verify the code with your backend
+    // For now, we'll just simulate a successful verification
+    setState(() {
+      _codeVerified = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم التحقق من الكود بنجاح')),
+    );
+  }
+
   Future<void> _resetPassword() async {
+    if (!_codeVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى التحقق من الكود أولاً')),
+      );
+      return;
+    }
+
     if (_uidb64 != null && _token != null) {
       final url = 'http://127.0.0.1:8000/api/password_reset/confirm/$_uidb64/$_token/';
       final response = await http.post(
@@ -65,6 +92,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           'Content-Type': 'application/json',
         },
         body: json.encode({
+          'code': _codeController.text, // Send the verification code
           'new_password': _newPasswordController.text,
           'confirm_new_password': _confirmPasswordController.text,
         }),
@@ -85,7 +113,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      _resetPassword();
+      if (!_codeVerified) {
+        _verifyCode();
+      } else {
+        _resetPassword();
+      }
     }
   }
 
@@ -101,63 +133,108 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           key: _formKey,
           child: Column(
             children: [
-              const SizedBox(height: 30),
-              TextFormField(
-                controller: _newPasswordController,
-                obscureText: _isObscure1,
-                decoration: InputDecoration(
-                  labelText: "كلمة المرور الجديدة",
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isObscure1 ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _isObscure1 = !_isObscure1;
-                      });
-                    },
+              if (!_codeVerified) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  "أدخل الكود المكون من 6 أرقام الذي تلقيته عبر البريد الإلكتروني",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _codeController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: const InputDecoration(
+                    labelText: "الكود",
+                    border: OutlineInputBorder(),
+                    counterText: "",
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "يرجى إدخال الكود";
+                    }
+                    if (value.length != 6) {
+                      return "يجب أن يكون الكود 6 أرقام";
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return "يرجى إدخال كلمة مرور جديدة";
-                  }
-                  if (value.length < 6) {
-                    return "يجب أن تكون كلمة المرور على الأقل 6 أحرف";
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _confirmPasswordController,
-                obscureText: _isObscure2,
-                decoration: InputDecoration(
-                  labelText: "تأكيد كلمة المرور",
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(_isObscure2 ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () {
-                      setState(() {
-                        _isObscure2 = !_isObscure2;
-                      });
-                    },
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _verifyCode,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
                   ),
+                  child: const Text("تحقق من الكود"),
                 ),
-                validator: (value) {
-                  if (value != _newPasswordController.text) {
-                    return "كلمتا المرور غير متطابقتين";
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _submit,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
+                const SizedBox(height: 30),
+              ],
+              if (_codeVerified) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  "الآن يمكنك إدخال كلمة المرور الجديدة",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
                 ),
-                child: const Text("إعادة تعيين كلمة المرور"),
-              ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _newPasswordController,
+                  obscureText: _isObscure1,
+                  decoration: InputDecoration(
+                    labelText: "كلمة المرور الجديدة",
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(_isObscure1 ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _isObscure1 = !_isObscure1;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "يرجى إدخال كلمة مرور جديدة";
+                    }
+                    if (value.length < 6) {
+                      return "يجب أن تكون كلمة المرور على الأقل 6 أحرف";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _isObscure2,
+                  decoration: InputDecoration(
+                    labelText: "تأكيد كلمة المرور",
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(_isObscure2 ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _isObscure2 = !_isObscure2;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value != _newPasswordController.text) {
+                      return "كلمتا المرور غير متطابقتين";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _submit,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: const Text("إعادة تعيين كلمة المرور"),
+                ),
+              ],
             ],
           ),
         ),
