@@ -52,9 +52,11 @@ def user_login(request):
         first_name = ""
         last_name = ""
         specialization = ""
+        medical_history = ""  
         if account_type == 'patient':
             first_name = user.patientprofile.first_name
             last_name = user.patientprofile.last_name
+            medical_history = user.patientprofile.medical_history or ""  
         elif account_type == 'doctor':
             first_name = user.doctorprofile.first_name
             last_name = user.doctorprofile.last_name
@@ -74,6 +76,8 @@ def user_login(request):
         }
         if account_type == 'doctor':
             response_data['user']['specialization'] = specialization
+        if account_type == 'patient':
+            response_data['user']['medical_history'] = medical_history  
 
         return Response(response_data, status=status.HTTP_200_OK, content_type='application/json; charset=utf-8')
     

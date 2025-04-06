@@ -65,6 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString('account_type', data['user']['account_type']);
         await prefs.setString('first_name', data['user']['first_name']);
         await prefs.setString('last_name', data['user']['last_name']);
+        await prefs.setString('specialization', data['user']['specialization'] ?? '');
+        await prefs.setString('medical_history', data['user']['medical_history'] ?? '');
 
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 

@@ -7,6 +7,7 @@ import 'reminders_screen.dart';
 import 'chatbot_screen.dart';
 import 'alternative_medications_screen.dart';
 import 'ai_analysis_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -44,17 +45,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _email = prefs.getString('user_email');
       _accountType = prefs.getString('account_type');
       _specialization = prefs.getString('specialization');
+      print('User Data Loaded: $_firstName, $_lastName, $_email, $_accountType, $_specialization');
     });
   }
 
   Future<void> _logout() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
+      String? accessToken = prefs.getString('access_token');
 
-      print('Token being sent: $token');
+      print('Access Token being sent: $accessToken');
 
-      if (token == null) {
+      if (accessToken == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم تسجيل الخروج')),
         );
@@ -68,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final response = await http.post(
         Uri.parse('http://127.0.0.1:8000/api/logout/'),
         headers: {
-          'Authorization': 'Token $token',
+          'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
         },
       );
@@ -113,6 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildDashboardButton(BuildContext context, {required String title, required String imagePath, required Widget screen}) {
     return GestureDetector(
       onTap: () {
+        print('Navigating to: $title');
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => screen),
         );
@@ -126,7 +129,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
+              SizedBox(
+                height: 100,
                 child: Image.asset(
                   imagePath,
                   fit: BoxFit.cover,
@@ -213,15 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: const TextStyle(color: Colors.white70, fontSize: 18),
                     textAlign: TextAlign.center,
                   ),
-                  if (_accountType == 'doctor')
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        'التخصص: ${_specialization ?? 'غير محدد'}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 18),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
+                  // شيلنا الجزء بتاع التخصص من هنا
                 ],
               ),
             ),
@@ -230,6 +226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
             _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
             _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
+            _buildDrawerItem(context, 'الملف الشخصي', Icons.person, ProfileScreen()),
             const Divider(),
             const Spacer(),
             ListTile(
@@ -274,11 +271,12 @@ class DashboardGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
+        childAspectRatio: 1.0,
       ),
       itemCount: _dashboardItems.length,
       itemBuilder: (context, index) {
