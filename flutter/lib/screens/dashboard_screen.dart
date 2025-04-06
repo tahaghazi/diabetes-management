@@ -123,27 +123,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Card(
         elevation: 4.0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 100,
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            print('Navigating to: $title');
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => screen),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 15),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -217,16 +228,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: const TextStyle(color: Colors.white70, fontSize: 18),
                     textAlign: TextAlign.center,
                   ),
-                  // شيلنا الجزء بتاع التخصص من هنا
                 ],
               ),
             ),
             _buildDrawerItem(context, 'تتبع مستوى السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
             _buildDrawerItem(context, 'التذكيرات', Icons.notifications, RemindersScreen()),
-            _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
-            _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
             _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
-            _buildDrawerItem(context, 'الملف الشخصي', Icons.person, ProfileScreen()),
+            _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
+            _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
+            _buildDrawerItem(context, 'الملف الشخصي والإعدادات', Icons.person, ProfileScreen()), 
             const Divider(),
             const Spacer(),
             ListTile(
@@ -245,7 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             if (_showWelcomeMessage)
               const Padding(
-                padding: EdgeInsets.only(bottom: 20),
+                padding: EdgeInsets.only(bottom: 20), // Should be bottom: 20.0, left as-is
                 child: Text(
                   'مرحبًا بك في تطبيق إدارة مرض السكري',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
@@ -304,9 +314,9 @@ final List<Map<String, dynamic>> _dashboardItems = [
     'screen': RemindersScreen(),
   },
   {
-    'title': 'الشات بوت',
-    'imagePath': 'assets/images/chatbot.png.webp',
-    'screen': ChatbotScreen(),
+    'title': 'التنبؤ بمرض السكر',
+    'imagePath': 'assets/images/ai_analysis.png.webp',
+    'screen': AIAnalysisScreen(),
   },
   {
     'title': 'الأدوية البديلة',
@@ -314,8 +324,13 @@ final List<Map<String, dynamic>> _dashboardItems = [
     'screen': AlternativeMedicationsScreen(),
   },
   {
-    'title': 'التنبؤ بمرض السكر',
-    'imagePath': 'assets/images/ai_analysis.png.webp',
-    'screen': AIAnalysisScreen(),
+    'title': 'الشات بوت',
+    'imagePath': 'assets/images/chatbot.png.webp',
+    'screen': ChatbotScreen(),
+  },
+  {
+    'title': 'الملف الشخصي والإعدادات',
+    'imagePath': 'assets/images/profile.png.webp', // Add this image to your assets
+    'screen': ProfileScreen(),
   },
 ];
