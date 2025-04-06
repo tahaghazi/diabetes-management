@@ -135,7 +135,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     if (value == null || value.isEmpty) {
                       return 'يرجى إدخال الاسم الأول';
                     }
-                    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(value)) {
+                    if (!RegExp(r'^[\p{L}]+$', unicode: true).hasMatch(value)) {
                       return 'الاسم الأول يجب أن يحتوي على حروف فقط';
                     }
                     return null;
@@ -152,7 +152,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     if (value == null || value.isEmpty) {
                       return 'يرجى إدخال الاسم الأخير';
                     }
-                    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(value)) {
+                    if (!RegExp(r'^[\p{L}]+$', unicode: true).hasMatch(value)) {
                       return 'الاسم الأخير يجب أن يحتوي على حروف فقط';
                     }
                     return null;
