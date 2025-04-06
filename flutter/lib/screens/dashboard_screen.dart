@@ -45,7 +45,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _email = prefs.getString('user_email');
       _accountType = prefs.getString('account_type');
       _specialization = prefs.getString('specialization');
-      print('User Data Loaded: $_firstName, $_lastName, $_email, $_accountType, $_specialization');
+      print('Loaded first_name: $_firstName');
+      print('Loaded last_name: $_lastName');
+      print('Loaded email: $_email');
+      print('Loaded account_type: $_accountType');
+      print('Loaded specialization: $_specialization');
     });
   }
 
@@ -118,61 +122,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDrawerItem(BuildContext context, String title, IconData icon, Widget? screen, {bool isLogout = false}) {
-    return ListTile(
-      leading: Icon(icon, color: isLogout ? Colors.red : Colors.blue, size: 30),
-      title: Text(title, style: TextStyle(color: isLogout ? Colors.red : Colors.black, fontSize: 18)),
-      onTap: () {
-        if (isLogout) {
-          _logout();
-        } else {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
-        }
-      },
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: ListTile(
+        leading: Icon(icon, color: isLogout ? Colors.red : Colors.blue, size: 30),
+        title: Text(title, style: TextStyle(color: isLogout ? Colors.red : Colors.black, fontSize: 18)),
+        onTap: () {
+          if (isLogout) {
+            _logout();
+          } else {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
+          }
+        },
+        trailing: null,
+      ),
     );
   }
 
   Widget _buildDashboardButton(BuildContext context, {required String title, required String imagePath, required Widget screen}) {
-    return GestureDetector(
-      onTap: () {
-        print('Navigating to: $title');
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => screen),
-        );
-      },
-      child: Card(
-        elevation: 4.0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () {
-            print('Navigating to: $title');
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => screen),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Image.asset(
-                    imagePath,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: GestureDetector(
+        onTap: () {
+          print('Navigating to: $title');
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => screen),
+          );
+        },
+        child: Card(
+          elevation: 4.0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              print('Navigating to: $title');
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => screen),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -182,108 +193,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'الصفحة الرئيسية',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'الصفحة الرئيسية',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.blue,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            Container(
-              height: 280,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue, Colors.blueAccent],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Container(
+                height: 280,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue, Colors.blueAccent],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        _accountType == 'doctor' ? 'assets/images/doctor_logo.png.webp' : 'assets/images/patient_logo.png.webp',
+                        height: 80,
+                        width: 80,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _email ?? 'الإيميل',
+                      style: const TextStyle(color: Colors.white70, fontSize: 18),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _accountType == 'doctor' ? 'دكتور' : 'مريض',
+                      style: const TextStyle(color: Colors.white70, fontSize: 18),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      _accountType == 'doctor' ? 'assets/images/doctor_logo.png.webp' : 'assets/images/patient_logo.png.webp',
-                      height: 80,
-                      width: 80,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _email ?? 'الإيميل',
-                    style: const TextStyle(color: Colors.white70, fontSize: 18),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _accountType == 'doctor' ? 'دكتور' : 'مريض',
-                    style: const TextStyle(color: Colors.white70, fontSize: 18),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            _buildDrawerItem(context, 'تتبع مستوى السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
-            _buildDrawerItem(context, 'التذكيرات', Icons.notifications, RemindersScreen()),
-            _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
-            _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
-            _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
-            _buildDrawerItem(context, 'الملف الشخصي ', Icons.person, ProfileScreen()), 
-            const Divider(),
-            const Spacer(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red, size: 30),
-              title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontSize: 18)),
-              onTap: _logout,
-            ),
-          ],
+              _buildDrawerItem(context, 'تتبع مستوى السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
+              _buildDrawerItem(context, 'التذكيرات', Icons.notifications, RemindersScreen()),
+              _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
+              _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
+              _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
+              _buildDrawerItem(context, 'الملف الشخصي', Icons.person, ProfileScreen()),
+              const Divider(),
+              const Spacer(),
+              _buildDrawerItem(context, 'تسجيل الخروج', Icons.logout, null, isLogout: true),
+            ],
+          ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (_showWelcomeMessage)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 20),
-                child: Text(
-                  'مرحبًا بك في تطبيق إدارة مرض السكري',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              if (_showWelcomeMessage)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 20),
+                  child: Text(
+                    'مرحبًا بك في تطبيق إدارة مرض السكري',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              Expanded(
+                child: DashboardGrid(
+                  buildDashboardButton: _buildDashboardButton,
                 ),
               ),
-            Expanded(
-              child: DashboardGrid(
-                buildDashboardButton: _buildDashboardButton,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -291,7 +302,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class DashboardGrid extends StatelessWidget {
-  final Widget Function(BuildContext, {required String title, required String imagePath, required Widget screen}) buildDashboardButton;
+  final Widget Function(BuildContext context, {required String title, required String imagePath, required Widget screen}) buildDashboardButton;
 
   const DashboardGrid({Key? key, required this.buildDashboardButton}) : super(key: key);
 
@@ -346,7 +357,7 @@ final List<Map<String, dynamic>> _dashboardItems = [
     'screen': ChatbotScreen(),
   },
   {
-    'title': 'الملف الشخصي ',
+    'title': 'الملف الشخصي',
     'imagePath': 'assets/images/profile.png.webp',
     'screen': ProfileScreen(),
   },

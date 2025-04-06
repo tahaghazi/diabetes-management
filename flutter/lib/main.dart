@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // إضافة لدعم الترجمة
 import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/sign_up_screen.dart';
@@ -10,7 +11,7 @@ import 'screens/profile_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/alternative_medications_screen.dart';
 import 'screens/account_type_screen.dart';
-import 'screens/reset_password_screen.dart'; 
+import 'screens/reset_password_screen.dart';
 
 void main() {
   runApp(DiabetesApp());
@@ -63,6 +64,14 @@ class DiabetesApp extends StatelessWidget {
           ),
         ),
       ),
+      // إضافة دعم اللغة العربية
+      locale: Locale('ar'), // تعيين اللغة العربية كلغة افتراضية
+      supportedLocales: [Locale('ar')], // اللغات المدعومة
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       initialRoute: '/',
       routes: {
         '/': (context) => LoginScreen(),
@@ -75,7 +84,7 @@ class DiabetesApp extends StatelessWidget {
         '/chatbot': (context) => ChatbotScreen(),
         '/alternative_medications': (context) => AlternativeMedicationsScreen(),
         '/account_type': (context) => AccountTypeScreen(),
-        '/reset_password': (context) => ResetPasswordScreen(), // 
+        '/reset_password': (context) => ResetPasswordScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/sign_up') {
