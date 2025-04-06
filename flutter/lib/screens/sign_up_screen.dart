@@ -26,70 +26,72 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
 
   Future<void> _register() async {
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isLoading = true;
-  });
+    setState(() {
+      _isLoading = true;
+    });
 
-  try {
-    var url = Uri.parse('http://127.0.0.1:8000/api/register/');
-    var requestBody = {
-      'email': _emailController.text.trim(),
-      'password1': _passwordController.text.trim(),
-      'password2': _confirmPasswordController.text.trim(),
-      'first_name': _firstNameController.text.trim(),
-      'last_name': _lastNameController.text.trim(),
-      'account_type': widget.accountType,
-    };
+    try {
+      var url = Uri.parse('http://127.0.0.1:8000/api/register/');
+      var requestBody = {
+        'email': _emailController.text.trim(),
+        'password1': _passwordController.text.trim(),
+        'password2': _confirmPasswordController.text.trim(),
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'account_type': widget.accountType,
+      };
 
-    if (widget.accountType == 'doctor') {
-      requestBody['specialization'] = _specializationController.text.trim();
-    }
-
-    var response = await HttpService().makeRequest(
-      method: 'POST',
-      url: url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(requestBody),
-    );
-
-    if (response == null) {
-      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
-      return;
-    }
-
-    var responseData = jsonDecode(response.body);
-    if (response.statusCode == 201) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String accessToken = responseData['access'];
-      String refreshToken = responseData['refresh'];
-      await prefs.setString('access_token', accessToken);
-      await prefs.setString('refresh_token', refreshToken);
-      await prefs.setString('user_email', responseData['user']['email']);
-      await prefs.setString('account_type', responseData['user']['account_type']);
-      await prefs.setString('first_name', responseData['user']['first_name']);
-      await prefs.setString('last_name', responseData['user']['last_name']);
       if (widget.accountType == 'doctor') {
-        await prefs.setString('specialization', _specializationController.text.trim());
+        requestBody['specialization'] = _specializationController.text.trim();
       }
 
-      // حفظ الـ tokens في HttpService
-      HttpService().setTokens(accessToken, refreshToken);
+      var response = await HttpService().makeRequest(
+        method: 'POST',
+        url: url,
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode(requestBody),
+      );
 
-      _showSnackBar('تم إنشاء الحساب بنجاح!', Colors.green);
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } else {
-      _showSnackBar(responseData['error'] ?? 'حدث خطأ ما', Colors.red);
+      if (response == null) {
+        _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+        return;
+      }
+
+      var responseData = jsonDecode(utf8.decode(response.bodyBytes));
+      print('Response first_name: ${responseData['user']['first_name']}');
+      print('Response last_name: ${responseData['user']['last_name']}');
+
+      if (response.statusCode == 201) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String accessToken = responseData['access'];
+        String refreshToken = responseData['refresh'];
+        await prefs.setString('access_token', accessToken);
+        await prefs.setString('refresh_token', refreshToken);
+        await prefs.setString('user_email', responseData['user']['email']);
+        await prefs.setString('account_type', responseData['user']['account_type']);
+        await prefs.setString('first_name', responseData['user']['first_name']);
+        await prefs.setString('last_name', responseData['user']['last_name']);
+        if (widget.accountType == 'doctor') {
+          await prefs.setString('specialization', _specializationController.text.trim());
+        }
+
+        HttpService().setTokens(accessToken, refreshToken);
+        _showSnackBar('تم إنشاء الحساب بنجاح!', Colors.green);
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        _showSnackBar(responseData['error'] ?? 'حدث خطأ ما', Colors.red);
+      }
+    } catch (e) {
+      print('Error: $e');
+      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
     }
-  } catch (e) {
-    _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
-  }
 
-  setState(() {
-    _isLoading = false;
-  });
-}
+    setState(() {
+      _isLoading = false;
+    });
+  }
 
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -112,6 +114,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _firstNameController,
                   decoration: InputDecoration(labelText: 'الاسم الأول'),
+                  textDirection: TextDirection.rtl,
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى إدخال الاسم الأول';
                     return null;
@@ -121,6 +124,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _lastNameController,
                   decoration: InputDecoration(labelText: 'الاسم الأخير'),
+                  textDirection: TextDirection.rtl,
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى إدخال الاسم الأخير';
                     return null;
@@ -133,6 +137,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       TextFormField(
                         controller: _specializationController,
                         decoration: InputDecoration(labelText: 'التخصص'),
+                        textDirection: TextDirection.rtl,
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'يرجى إدخال التخصص';
                           return null;
@@ -144,6 +149,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(labelText: 'البريد الإلكتروني'),
+                  textDirection: TextDirection.rtl,
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى إدخال البريد الإلكتروني';
                     if (!RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(value)) return 'البريد الإلكتروني غير صحيح';
@@ -167,6 +173,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                     ),
                   ),
+                  textDirection: TextDirection.rtl,
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                     if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
@@ -190,6 +197,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                     ),
                   ),
+                  textDirection: TextDirection.rtl,
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'يرجى تأكيد كلمة المرور';
                     if (value != _passwordController.text) return 'كلمتا المرور غير متطابقتين';
