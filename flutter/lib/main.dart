@@ -6,7 +6,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/glucose_tracking_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'screens/ai_analysis_screen.dart';
-import 'screens/profile_settings_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/alternative_medications_screen.dart';
 import 'screens/account_type_screen.dart';
@@ -70,7 +70,7 @@ class DiabetesApp extends StatelessWidget {
         '/glucose_tracking': (context) => GlucoseTrackingScreen(),
         '/reminders': (context) => RemindersScreen(),
         '/ai_analysis': (context) => AIAnalysisScreen(),
-        '/profile_settings': (context) => ProfileSettingsScreen(),
+        '/profile_settings': (context) => ProfileScreen(),
         '/forgot_password': (context) => ForgotPasswordScreen(),
         '/chatbot': (context) => ChatbotScreen(),
         '/alternative_medications': (context) => AlternativeMedicationsScreen(),

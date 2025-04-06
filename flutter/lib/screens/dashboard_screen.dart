@@ -236,7 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
             _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
             _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
-            _buildDrawerItem(context, 'الملف الشخصي والإعدادات', Icons.person, ProfileScreen()), 
+            _buildDrawerItem(context, 'الملف الشخصي ', Icons.person, ProfileScreen()), 
             const Divider(),
             const Spacer(),
             ListTile(
@@ -329,7 +329,7 @@ final List<Map<String, dynamic>> _dashboardItems = [
     'screen': ChatbotScreen(),
   },
   {
-    'title': 'الملف الشخصي والإعدادات',
+    'title': 'الملف الشخصي ',
     'imagePath': 'assets/images/profile.png.webp', // Add this image to your assets
     'screen': ProfileScreen(),
   },
