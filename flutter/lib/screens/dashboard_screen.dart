@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'login_screen.dart';
 import 'glucose_tracking_screen.dart';
 import 'reminders_screen.dart';
@@ -8,6 +7,7 @@ import 'chatbot_screen.dart';
 import 'alternative_medications_screen.dart';
 import 'ai_analysis_screen.dart';
 import 'profile_screen.dart';
+import 'package:flutter_/services/http_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -61,39 +61,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SnackBar(content: Text('تم تسجيل الخروج')),
         );
         await prefs.clear();
+        HttpService().clearTokens();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => LoginScreen()),
         );
         return;
       }
 
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/logout/'),
+      final response = await HttpService().makeRequest(
+        method: 'POST',
+        url: Uri.parse('http://127.0.0.1:8000/api/logout/'),
         headers: {
-          'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
         },
       );
 
+      if (response == null) {
+        await prefs.clear();
+        HttpService().clearTokens();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+        return;
+      }
+
       print('Response Status: ${response.statusCode}');
       print('Response Body: ${response.body}');
 
+      await prefs.clear();
+      HttpService().clearTokens();
+
       if (response.statusCode == 200 || response.statusCode == 204) {
-        await prefs.clear();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم تسجيل الخروج بنجاح')),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}')),
         );
       }
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ أثناء تسجيل الخروج: $e')),
+      );
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      HttpService().clearTokens();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
       );
     }
   }
@@ -242,9 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red, size: 30),
               title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red, fontSize: 18)),
-              onTap: () async {
-                await _logout();
-              },
+              onTap: _logout,
             ),
           ],
         ),
@@ -255,7 +272,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             if (_showWelcomeMessage)
               const Padding(
-                padding: EdgeInsets.only(bottom: 20), // Should be bottom: 20.0, left as-is
+                padding: EdgeInsets.only(bottom: 20),
                 child: Text(
                   'مرحبًا بك في تطبيق إدارة مرض السكري',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
@@ -330,7 +347,7 @@ final List<Map<String, dynamic>> _dashboardItems = [
   },
   {
     'title': 'الملف الشخصي ',
-    'imagePath': 'assets/images/profile.png.webp', // Add this image to your assets
+    'imagePath': 'assets/images/profile.png.webp',
     'screen': ProfileScreen(),
   },
 ];

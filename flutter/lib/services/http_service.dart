@@ -1,0 +1,125 @@
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class HttpService {
+  static final HttpService _instance = HttpService._internal();
+  final http.Client _client = http.Client();
+  String? _accessToken;
+  String? _refreshToken;
+
+  factory HttpService() {
+    return _instance;
+  }
+
+  HttpService._internal();
+
+  http.Client get client => _client;
+
+  void setTokens(String accessToken, String refreshToken) {
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+  }
+
+  String? getAccessToken() {
+    return _accessToken;
+  }
+
+  String? getRefreshToken() {
+    return _refreshToken;
+  }
+
+  void clearTokens() {
+    _accessToken = null;
+    _refreshToken = null;
+  }
+
+  Future<bool> refreshAccessToken() async {
+    if (_refreshToken == null) {
+      print("No refresh token available.");
+      return false;
+    }
+
+    try {
+      var response = await _client.post(
+        Uri.parse('http://127.0.0.1:8000/api/token/refresh/'),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({'refresh': _refreshToken}),
+      );
+
+      print("Refresh Token Response Status: ${response.statusCode}");
+      print("Refresh Token Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        String newAccessToken = data['access'];
+        _accessToken = newAccessToken;
+
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', newAccessToken);
+        print("Access token refreshed successfully: $newAccessToken");
+        return true;
+      } else {
+        print("Failed to refresh token: ${response.body}");
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.remove('access_token');
+        await prefs.remove('refresh_token');
+        clearTokens();
+        return false;
+      }
+    } catch (e) {
+      print("Error refreshing token: $e");
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove('access_token');
+      await prefs.remove('refresh_token');
+      clearTokens();
+      return false;
+    }
+  }
+
+  Future<http.Response?> makeRequest({
+    required String method,
+    required Uri url,
+    Map<String, String>? headers,
+    dynamic body,
+  }) async {
+    headers ??= {};
+    if (_accessToken != null) {
+      headers['Authorization'] = 'Bearer $_accessToken';
+    }
+
+    http.Response response;
+    if (method.toUpperCase() == 'GET') {
+      response = await _client.get(url, headers: headers);
+    } else if (method.toUpperCase() == 'POST') {
+      response = await _client.post(url, headers: headers, body: body);
+    } else if (method.toUpperCase() == 'PUT') {
+      response = await _client.put(url, headers: headers, body: body);
+    } else {
+      throw Exception('Unsupported HTTP method');
+    }
+
+    if (response.statusCode == 401) {
+      print("Access token expired, attempting to refresh...");
+      bool refreshed = await refreshAccessToken();
+      if (refreshed) {
+        headers['Authorization'] = 'Bearer $_accessToken';
+        if (method.toUpperCase() == 'GET') {
+          response = await _client.get(url, headers: headers);
+        } else if (method.toUpperCase() == 'POST') {
+          response = await _client.post(url, headers: headers, body: body);
+        } else if (method.toUpperCase() == 'PUT') {
+          response = await _client.put(url, headers: headers, body: body);
+        } else {
+          throw Exception('Unsupported HTTP method');
+        }
+      } else {
+        return null;
+      }
+    }
+
+    return response;
+  }
+}

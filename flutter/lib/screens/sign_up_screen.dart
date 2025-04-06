@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_/services/http_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   final String accountType;
@@ -26,62 +26,70 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+  setState(() {
+    _isLoading = true;
+  });
 
-    try {
-      var url = Uri.parse('http://127.0.0.1:8000/api/register/');
-      var requestBody = {
-        'email': _emailController.text.trim(),
-        'password1': _passwordController.text.trim(),
-        'password2': _confirmPasswordController.text.trim(),
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'account_type': widget.accountType,
-      };
+  try {
+    var url = Uri.parse('http://127.0.0.1:8000/api/register/');
+    var requestBody = {
+      'email': _emailController.text.trim(),
+      'password1': _passwordController.text.trim(),
+      'password2': _confirmPasswordController.text.trim(),
+      'first_name': _firstNameController.text.trim(),
+      'last_name': _lastNameController.text.trim(),
+      'account_type': widget.accountType,
+    };
 
-      if (widget.accountType == 'doctor') {
-        requestBody['specialization'] = _specializationController.text.trim();
-      }
-
-      var response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
-      );
-
-      var responseData = jsonDecode(response.body);
-      if (response.statusCode == 201) {
-        // حفظ الـ tokens في SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', responseData['access']);
-        await prefs.setString('refresh_token', responseData['refresh']);
-        // حفظ بيانات المستخدم (اختياري)
-        await prefs.setString('user_email', responseData['user']['email']);
-        await prefs.setString('account_type', responseData['user']['account_type']);
-        await prefs.setString('first_name', responseData['user']['first_name']);
-        await prefs.setString('last_name', responseData['user']['last_name']);
-        if (widget.accountType == 'doctor') {
-          await prefs.setString('specialization', _specializationController.text.trim());
-        }
-
-        _showSnackBar('تم إنشاء الحساب بنجاح!', Colors.green);
-        // الانتقال مباشرة للـ dashboard
-        Navigator.pushReplacementNamed(context, '/dashboard');
-      } else {
-        _showSnackBar(responseData['error'] ?? 'حدث خطأ ما', Colors.red);
-      }
-    } catch (e) {
-      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+    if (widget.accountType == 'doctor') {
+      requestBody['specialization'] = _specializationController.text.trim();
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    var response = await HttpService().makeRequest(
+      method: 'POST',
+      url: url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(requestBody),
+    );
+
+    if (response == null) {
+      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+      return;
+    }
+
+    var responseData = jsonDecode(response.body);
+    if (response.statusCode == 201) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String accessToken = responseData['access'];
+      String refreshToken = responseData['refresh'];
+      await prefs.setString('access_token', accessToken);
+      await prefs.setString('refresh_token', refreshToken);
+      await prefs.setString('user_email', responseData['user']['email']);
+      await prefs.setString('account_type', responseData['user']['account_type']);
+      await prefs.setString('first_name', responseData['user']['first_name']);
+      await prefs.setString('last_name', responseData['user']['last_name']);
+      if (widget.accountType == 'doctor') {
+        await prefs.setString('specialization', _specializationController.text.trim());
+      }
+
+      // حفظ الـ tokens في HttpService
+      HttpService().setTokens(accessToken, refreshToken);
+
+      _showSnackBar('تم إنشاء الحساب بنجاح!', Colors.green);
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
+      _showSnackBar(responseData['error'] ?? 'حدث خطأ ما', Colors.red);
+    }
+  } catch (e) {
+    _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
   }
+
+  setState(() {
+    _isLoading = false;
+  });
+}
 
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(

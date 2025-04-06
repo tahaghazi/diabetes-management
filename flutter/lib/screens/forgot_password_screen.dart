@@ -1,16 +1,25 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_/services/http_service.dart';
 
-class ForgotPasswordScreen extends StatelessWidget {
+class ForgotPasswordScreen extends StatefulWidget {
+  @override
+  _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
 
-  // دالة للتحقق من صحة البريد الإلكتروني
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
   bool isValidEmail(String email) {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(email);
   }
 
-  // إرسال طلب API لإعادة تعيين كلمة المرور
   void _resetPassword(BuildContext context) async {
     String email = _emailController.text.trim();
 
@@ -20,11 +29,17 @@ class ForgotPasswordScreen extends StatelessWidget {
       _showSnackBar(context, 'يرجى إدخال بريد إلكتروني صحيح', Colors.orange);
     } else {
       try {
-        var response = await http.post(
-          Uri.parse('http://127.0.0.1:8000/api/password_reset/'), // URL API
+        var response = await HttpService().makeRequest(
+          method: 'POST',
+          url: Uri.parse('http://127.0.0.1:8000/api/password_reset/'),
           headers: {'Content-Type': 'application/json'},
-          body: json.encode({'email': email}),
+          body: jsonEncode({'email': email}),
         );
+
+        if (response == null) {
+          _showSnackBar(context, 'حدث خطأ في الاتصال بالخادم', Colors.red);
+          return;
+        }
 
         if (response.statusCode == 200) {
           _showSnackBar(context, 'تم إرسال رابط إعادة تعيين كلمة المرور!', Colors.green);
@@ -37,7 +52,6 @@ class ForgotPasswordScreen extends StatelessWidget {
     }
   }
 
-  // دالة لعرض رسائل التنبيه
   void _showSnackBar(BuildContext context, String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
