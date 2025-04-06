@@ -24,17 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
         .hasMatch(email);
   }
 
-  Future<void> _saveSession(String email, String accountType, String firstName, String lastName, {String? specialization}) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_email', email);
-    await prefs.setString('account_type', accountType);
-    await prefs.setString('first_name', firstName);
-    await prefs.setString('last_name', lastName);
-    if (specialization != null) {
-      await prefs.setString('specialization', specialization);
-    }
-  }
-
   Future<void> _login() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
@@ -68,36 +57,35 @@ class _LoginScreenState extends State<LoginScreen> {
       print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        String accountType = data['user']['account_type'];
-        String firstName = data['user']['first_name'];
-        String lastName = data['user']['last_name'];
-        String? specialization = data['user']['specialization'];
+        // حفظ الـ tokens وبيانات المستخدم في SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', data['access']);
+        await prefs.setString('refresh_token', data['refresh']);
+        await prefs.setString('user_email', data['user']['email']);
+        await prefs.setString('account_type', data['user']['account_type']);
+        await prefs.setString('first_name', data['user']['first_name']);
+        await prefs.setString('last_name', data['user']['last_name']);
 
-        await _saveSession(email, accountType, firstName, lastName, specialization: specialization);
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => DashboardScreen()),
         );
-      } else if (response.statusCode == 401 || response.statusCode == 400) {
-        // ❌ كلمة المرور أو البريد الإلكتروني غير صحيحة
-        _showSnackBar('كلمة المرور أو البريد الإلكتروني غير صحيحة', Colors.red);
-      } else if (response.statusCode == 404) {
-        // ❌ البريد الإلكتروني غير مسجل
-        _showSnackBar('البريد الإلكتروني غير موجود أو غير مسجل', Colors.red);
+      } else if (response.statusCode == 401) {
+        // Invalid credentials
+        _showSnackBar(data['error'] ?? 'كلمة المرور أو البريد الإلكتروني غير صحيحة', Colors.red);
+      } else if (response.statusCode == 400) {
+        // Bad request
+        _showSnackBar(data['error'] ?? 'حدث خطأ أثناء تسجيل الدخول', Colors.red);
       } else if (response.statusCode == 500) {
-        // ⚠️ السيرفر فيه مشكلة
+        // Server error
         _showSnackBar('حدث خطأ في الخادم، حاول لاحقًا', Colors.red);
-      } else if (response.statusCode == 503) {
-        // ⚠️ الخادم غير متاح
-        _showSnackBar('الخادم غير متاح الآن، حاول لاحقًا', Colors.red);
       } else {
-        // ⚠️ حالة غير معروفة
+        // Other errors
         _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
       }
     } catch (e) {
-      // ❌ حدث خطأ في الاتصال بالخادم
       _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
       print("Error: $e");
     }
