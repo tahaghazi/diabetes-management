@@ -51,7 +51,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         method: 'POST',
         url: url,
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode(requestBody),
+        body: requestBody,
       );
 
       if (response == null) {

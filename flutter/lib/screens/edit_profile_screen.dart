@@ -11,7 +11,7 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _formKey = GlobalKey<FormState>(); // للـ validation
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _specializationController = TextEditingController();
@@ -34,77 +34,82 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _medicalHistoryController.text = prefs.getString('medical_history') ?? '';
       _accountType = prefs.getString('account_type');
     });
+
+    String? accessToken = prefs.getString('access_token');
+    String? refreshToken = prefs.getString('refresh_token');
+    if (accessToken != null && refreshToken != null) {
+      HttpService().setTokens(accessToken, refreshToken);
+    }
   }
 
   Future<void> _updateProfile() async {
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isLoading = true;
-  });
+    setState(() {
+      _isLoading = true;
+    });
 
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? accessToken = prefs.getString('access_token');
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? accessToken = prefs.getString('access_token');
 
-    if (accessToken == null) {
-      _showSnackBar('يرجى تسجيل الدخول مرة أخرى', Colors.red);
-      Navigator.pushReplacementNamed(context, '/login');
-      return;
-    }
-
-    var requestBody = {
-      'first_name': _firstNameController.text.trim(),
-      'last_name': _lastNameController.text.trim(),
-    };
-
-    if (_accountType == 'doctor') {
-      requestBody['specialization'] = _specializationController.text.trim();
-    } else if (_accountType == 'patient') {
-      requestBody['medical_history'] = _medicalHistoryController.text.trim();
-    }
-
-    var response = await HttpService().makeRequest(
-      method: 'PUT',
-      url: Uri.parse('http://127.0.0.1:8000/api/update-profile/'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(requestBody),
-    );
-
-    if (response == null) {
-      _showSnackBar('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى', Colors.red);
-      Navigator.pushReplacementNamed(context, '/login');
-      return;
-    }
-
-    if (response.statusCode == 200) {
-      await prefs.setString('first_name', _firstNameController.text.trim());
-      await prefs.setString('last_name', _lastNameController.text.trim());
-      if (_accountType == 'doctor') {
-        await prefs.setString('specialization', _specializationController.text.trim());
-      } else if (_accountType == 'patient') {
-        await prefs.setString('medical_history', _medicalHistoryController.text.trim());
+      if (accessToken == null) {
+        _showSnackBar('يرجى تسجيل الدخول مرة أخرى', Colors.red);
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
       }
 
-      _showSnackBar('تم تحديث البيانات بنجاح!', Colors.green);
-      Navigator.pop(context, true);
-    } else {
-      var responseData = jsonDecode(response.body);
-      _showSnackBar(responseData['message'] ?? 'حدث خطأ أثناء تحديث البيانات', Colors.red);
+      var requestBody = {
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+      };
+
+      if (_accountType == 'doctor') {
+        requestBody['specialization'] = _specializationController.text.trim();
+      } else if (_accountType == 'patient') {
+        requestBody['medical_history'] = _medicalHistoryController.text.trim();
+      }
+
+      var response = await HttpService().makeRequest(
+        method: 'PUT',
+        url: Uri.parse('http://127.0.0.1:8000/api/update-profile/'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      );
+
+      if (response == null) {
+        _showSnackBar('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى', Colors.red);
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
+      if (response.statusCode == 200) {
+        await prefs.setString('first_name', _firstNameController.text.trim());
+        await prefs.setString('last_name', _lastNameController.text.trim());
+        if (_accountType == 'doctor') {
+          await prefs.setString('specialization', _specializationController.text.trim());
+        } else if (_accountType == 'patient') {
+          await prefs.setString('medical_history', _medicalHistoryController.text.trim());
+        }
+
+        _showSnackBar('تم تحديث البيانات بنجاح!', Colors.green);
+        Navigator.pop(context, true);
+      } else {
+        var responseData = jsonDecode(response.body);
+        _showSnackBar(responseData['message'] ?? 'حدث خطأ أثناء تحديث البيانات', Colors.red);
+      }
+    } catch (e) {
+      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
     }
-  } catch (e) {
-    _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
-  setState(() {
-    _isLoading = false;
-  });
-}
-
   void _cancel() {
-    // رجوع للـ ProfileScreen من غير ما يحفظ أي تغييرات
     Navigator.pop(context);
   }
 
@@ -193,7 +198,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // توزيع الأزرار بشكل متساوي
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           ElevatedButton(
                             onPressed: _updateProfile,
@@ -207,9 +212,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: _cancel, // استدعاء دالة الإلغاء
+                            onPressed: _cancel,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey, // لون رمادي لزر الإلغاء
+                              backgroundColor: Colors.grey,
                               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                             ),
                             child: const Text(

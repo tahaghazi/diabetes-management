@@ -51,6 +51,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print('Loaded account_type: $_accountType');
       print('Loaded specialization: $_specialization');
     });
+
+    // تحديث الـ tokens في HttpService لما نجيب البيانات من SharedPreferences
+    String? accessToken = prefs.getString('access_token');
+    String? refreshToken = prefs.getString('refresh_token');
+    if (accessToken != null && refreshToken != null) {
+      HttpService().setTokens(accessToken, refreshToken);
+      print('Tokens updated in HttpService: Access Token: $accessToken, Refresh Token: $refreshToken');
+    }
   }
 
   Future<void> _logout() async {
