@@ -107,6 +107,8 @@ class HttpService {
       response = await _client.post(url, headers: headers, body: bodyString);
     } else if (method.toUpperCase() == 'PUT') {
       response = await _client.put(url, headers: headers, body: bodyString);
+    } else if (method.toUpperCase() == 'DELETE') {
+      response = await _client.delete(url, headers: headers);
     } else {
       throw Exception('Unsupported HTTP method');
     }
@@ -130,6 +132,8 @@ class HttpService {
           response = await _client.post(url, headers: headers, body: bodyString);
         } else if (method.toUpperCase() == 'PUT') {
           response = await _client.put(url, headers: headers, body: bodyString);
+        } else if (method.toUpperCase() == 'DELETE') { 
+          response = await _client.delete(url, headers: headers);
         } else {
           throw Exception('Unsupported HTTP method');
         }
