@@ -90,13 +90,23 @@ class HttpService {
       headers['Authorization'] = 'Bearer $_accessToken';
     }
 
+    // لو فيه body والـ content-type هو application/json، نعمل jsonEncode
+    String? bodyString;
+    if (body != null) {
+      if (headers['Content-Type']?.contains('application/json') == true) {
+        bodyString = jsonEncode(body);
+      } else {
+        bodyString = body.toString();
+      }
+    }
+
     http.Response response;
     if (method.toUpperCase() == 'GET') {
       response = await _client.get(url, headers: headers);
     } else if (method.toUpperCase() == 'POST') {
-      response = await _client.post(url, headers: headers, body: body);
+      response = await _client.post(url, headers: headers, body: bodyString);
     } else if (method.toUpperCase() == 'PUT') {
-      response = await _client.put(url, headers: headers, body: body);
+      response = await _client.put(url, headers: headers, body: bodyString);
     } else {
       throw Exception('Unsupported HTTP method');
     }
@@ -106,12 +116,20 @@ class HttpService {
       bool refreshed = await refreshAccessToken();
       if (refreshed) {
         headers['Authorization'] = 'Bearer $_accessToken';
+        // نعمل jsonEncode تاني لو لسه فيه body
+        if (body != null) {
+          if (headers['Content-Type']?.contains('application/json') == true) {
+            bodyString = jsonEncode(body);
+          } else {
+            bodyString = body.toString();
+          }
+        }
         if (method.toUpperCase() == 'GET') {
           response = await _client.get(url, headers: headers);
         } else if (method.toUpperCase() == 'POST') {
-          response = await _client.post(url, headers: headers, body: body);
+          response = await _client.post(url, headers: headers, body: bodyString);
         } else if (method.toUpperCase() == 'PUT') {
-          response = await _client.put(url, headers: headers, body: body);
+          response = await _client.put(url, headers: headers, body: bodyString);
         } else {
           throw Exception('Unsupported HTTP method');
         }

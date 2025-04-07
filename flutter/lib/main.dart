@@ -84,7 +84,6 @@ class DiabetesApp extends StatelessWidget {
         '/chatbot': (context) => ChatbotScreen(),
         '/alternative_medications': (context) => AlternativeMedicationsScreen(),
         '/account_type': (context) => AccountTypeScreen(),
-        '/reset_password': (context) => ResetPasswordScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/sign_up') {
