@@ -9,6 +9,7 @@ class DailyReminder(models.Model):
         ('hydration', 'Hydration')
     ])
     reminder_time = models.TimeField()
+    medication_name = models.CharField(max_length=100, blank=True, null=True)
     active = models.BooleanField(default=True)
 
     def __str__(self):
