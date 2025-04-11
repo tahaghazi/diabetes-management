@@ -148,32 +148,6 @@ class DashboardScreenState extends State<DashboardScreen> {
         await NotificationService.getLoggedNotifications();
     debugPrint('Showing all notifications dialog with ${loggedNotifications.length} notifications');
 
-    Map<String, List<Map<String, dynamic>>> notificationsByType = {
-      'تحليل السكر': [],
-      'الدواء': [],
-      'شرب الماء': [],
-    };
-
-    for (var notification in loggedNotifications) {
-      String reminderType = notification['reminder_type'];
-      String arabicType;
-      switch (reminderType) {
-        case 'blood_glucose_test':
-          arabicType = 'تحليل السكر';
-          break;
-        case 'medication':
-          arabicType = 'الدواء';
-          break;
-        case 'hydration':
-          arabicType = 'شرب الماء';
-          break;
-        default:
-          arabicType = reminderType;
-      }
-      notificationsByType[arabicType] = notificationsByType[arabicType] ?? [];
-      notificationsByType[arabicType]!.add(notification);
-    }
-
     if (mounted) {
       showDialog(
         context: context,
@@ -182,61 +156,64 @@ class DashboardScreenState extends State<DashboardScreen> {
             builder: (context, setState) {
               return AlertDialog(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                title: Text('الإشعارات المرسلة',
-                    style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+                title: Text(
+                  'الإشعارات المرسلة',
+                  style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
+                ),
                 content: SizedBox(
                   width: double.maxFinite,
                   height: 300,
                   child: loggedNotifications.isEmpty
                       ? Center(
-                          child: Text('لا توجد إشعارات حاليًا', style: TextStyle(color: Colors.grey)))
-                      : ListView(
+                          child: Text(
+                            'لا توجد إشعارات حاليًا',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
                           shrinkWrap: true,
-                          children: notificationsByType.entries.map((entry) {
-                            String type = entry.key;
-                            List<Map<String, dynamic>> notifications = entry.value;
+                          itemCount: loggedNotifications.length,
+                          itemBuilder: (context, index) {
+                            final notification = loggedNotifications[index];
+                            DateTime scheduledTime = DateTime.parse(notification['scheduled_time']);
+                            final hour = scheduledTime.hour > 12
+                                ? scheduledTime.hour - 12
+                                : scheduledTime.hour == 0
+                                    ? 12
+                                    : scheduledTime.hour;
+                            final minute = scheduledTime.minute.toString().padLeft(2, '0');
+                            final period = scheduledTime.hour >= 12 ? 'مساءً' : 'صباحًا';
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  type,
-                                  style: TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.teal.withOpacity(0.2)),
                                 ),
-                                if (notifications.isEmpty)
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                                    child: Text('لا توجد إشعارات مرسلة من هذا النوع',
-                                        style: TextStyle(color: Colors.grey)),
-                                  )
-                                else
-                                  ...notifications.map((notification) {
-                                    DateTime scheduledTime =
-                                        DateTime.parse(notification['scheduled_time']);
-                                    final hour = scheduledTime.hour > 12
-                                        ? scheduledTime.hour - 12
-                                        : scheduledTime.hour == 0
-                                            ? 12
-                                            : scheduledTime.hour;
-                                    final period = scheduledTime.hour >= 12 ? 'مساءً' : 'صباحًا';
-                                    return Card(
-                                      elevation: 2,
-                                      margin: EdgeInsets.symmetric(vertical: 4),
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10)),
-                                      child: ListTile(
-                                        title: Text(notification['title'],
-                                            style: TextStyle(fontWeight: FontWeight.bold)),
-                                        subtitle: Text(
-                                            'الوقت: $hour:${scheduledTime.minute.toString().padLeft(2, '0')} $period'),
+                                padding: EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notification['title'],
+                                      style: TextStyle(
+                                        color: Colors.teal,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
                                       ),
-                                    );
-                                  }),
-                                Divider(),
-                              ],
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'الوقت: $hour:$minute $period',
+                                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
-                          }).toList(),
+                          },
                         ),
                 ),
                 actions: [
@@ -350,7 +327,6 @@ class DashboardScreenState extends State<DashboardScreen> {
             _logout();
           } else {
             final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen!));
-            // إذا كان العنصر هو الملف الشخصي ورجع result بـ true، اعيد تحميل البيانات
             if (title == 'الملف الشخصي' && result == true && mounted) {
               await _loadUserData();
             }
@@ -368,7 +344,6 @@ class DashboardScreenState extends State<DashboardScreen> {
         onTap: () async {
           debugPrint('Navigating to: $title');
           final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
-          // Refresh data only if changes were made
           if (title == 'الملف الشخصي' && result == true && mounted) {
             await _loadUserData();
           }
@@ -381,7 +356,6 @@ class DashboardScreenState extends State<DashboardScreen> {
             onTap: () async {
               debugPrint('Navigating to: $title');
               final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
-              // Refresh data only if changes were made
               if (title == 'الملف الشخصي' && result == true && mounted) {
                 await _loadUserData();
               }

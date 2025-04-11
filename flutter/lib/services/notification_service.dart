@@ -5,14 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
-import 'package:logger/logger.dart';    
+import 'package:logger/logger.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  static final Logger _logger = Logger();   
+  static final Logger _logger = Logger();
 
-     
   static Future<void> init() async {
     try {
       tz.initializeTimeZones();
@@ -93,7 +92,6 @@ class NotificationService {
     await androidPlugin?.createNotificationChannel(medicationChannel);
   }
 
-  
   static Future<bool> requestNotificationPermissions() async {
     final result = await _notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
@@ -101,7 +99,6 @@ class NotificationService {
     return result ?? false;
   }
 
-     
   static Future<void> scheduleDailyNotification({
     required int id,
     required String title,
@@ -109,7 +106,13 @@ class NotificationService {
     required DateTime scheduledTime,
     required String reminderType,
     String? medicationName,
+    bool active = true,
   }) async {
+    if (!active) {
+      _logger.i('تم تجاهل جدولة الإشعار لأن التذكير غير نشط: $title');
+      return;
+    }
+
     try {
       final location = tz.getLocation('Africa/Cairo');
       final now = tz.TZDateTime.now(location);
@@ -202,7 +205,7 @@ class NotificationService {
         body,
         scheduledDate,
         platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // تحديث الخاصية المهجورة
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
         payload: payload,
@@ -214,7 +217,6 @@ class NotificationService {
     }
   }
 
-       
   static Future<void> cancelNotification(int id) async {
     try {
       await _notificationsPlugin.cancel(id);
@@ -224,7 +226,6 @@ class NotificationService {
     }
   }
 
-       
   static Future<void> logNotification(
     int id,
     String title,
@@ -247,7 +248,6 @@ class NotificationService {
         if (medicationName != null) 'medication_name': medicationName,
       };
 
-       
       bool exists = loggedNotifications.any((n) {
         Map<String, dynamic> existing = jsonDecode(n);
         return existing['id'] == id && existing['scheduled_time'] == scheduledTime.toIso8601String();
@@ -263,7 +263,6 @@ class NotificationService {
     }
   }
 
-     
   static Future<List<Map<String, dynamic>>> getLoggedNotifications() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -277,7 +276,6 @@ class NotificationService {
     }
   }
 
-      
   static Future<void> clearLoggedNotifications() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
