@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 class HttpService {
   static final HttpService _instance = HttpService._internal();
@@ -36,7 +37,7 @@ class HttpService {
 
   Future<bool> refreshAccessToken() async {
     if (_refreshToken == null) {
-      print("No refresh token available.");
+      debugPrint("No refresh token available.");
       return false;
     }
 
@@ -49,8 +50,8 @@ class HttpService {
         body: jsonEncode({'refresh': _refreshToken}),
       );
 
-      print("Refresh Token Response Status: ${response.statusCode}");
-      print("Refresh Token Response Body: ${response.body}");
+      debugPrint("Refresh Token Response Status: ${response.statusCode}");
+      debugPrint("Refresh Token Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
@@ -59,10 +60,10 @@ class HttpService {
 
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', newAccessToken);
-        print("Access token refreshed successfully: $newAccessToken");
+        debugPrint("Access token refreshed successfully: $newAccessToken");
         return true;
       } else {
-        print("Failed to refresh token: ${response.body}");
+        debugPrint("Failed to refresh token: ${response.body}");
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.remove('access_token');
         await prefs.remove('refresh_token');
@@ -70,7 +71,7 @@ class HttpService {
         return false;
       }
     } catch (e) {
-      print("Error refreshing token: $e");
+      debugPrint("Error refreshing token: $e");
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove('access_token');
       await prefs.remove('refresh_token');
@@ -90,7 +91,6 @@ class HttpService {
       headers['Authorization'] = 'Bearer $_accessToken';
     }
 
-    // لو فيه body والـ content-type هو application/json، نعمل jsonEncode
     String? bodyString;
     if (body != null) {
       if (headers['Content-Type']?.contains('application/json') == true) {
@@ -114,11 +114,10 @@ class HttpService {
     }
 
     if (response.statusCode == 401) {
-      print("Access token expired, attempting to refresh...");
+      debugPrint("Access token expired, attempting to refresh...");
       bool refreshed = await refreshAccessToken();
       if (refreshed) {
         headers['Authorization'] = 'Bearer $_accessToken';
-        // نعمل jsonEncode تاني لو لسه فيه body
         if (body != null) {
           if (headers['Content-Type']?.contains('application/json') == true) {
             bodyString = jsonEncode(body);
@@ -132,7 +131,7 @@ class HttpService {
           response = await _client.post(url, headers: headers, body: bodyString);
         } else if (method.toUpperCase() == 'PUT') {
           response = await _client.put(url, headers: headers, body: bodyString);
-        } else if (method.toUpperCase() == 'DELETE') { 
+        } else if (method.toUpperCase() == 'DELETE') {
           response = await _client.delete(url, headers: headers);
         } else {
           throw Exception('Unsupported HTTP method');

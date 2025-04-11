@@ -3,13 +3,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
-  _ProfileAndSettingsScreenState createState() => _ProfileAndSettingsScreenState();
+  ProfileAndSettingsScreenState createState() => ProfileAndSettingsScreenState();
 }
 
-class _ProfileAndSettingsScreenState extends State<ProfileScreen> {
+class ProfileAndSettingsScreenState extends State<ProfileScreen> {
   String? _firstName;
   String? _lastName;
   String? _email;
@@ -58,7 +58,7 @@ class _ProfileAndSettingsScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الملف الشخصي '),
+        title: const Text('الملف الشخصي'),
         centerTitle: true,
         backgroundColor: Colors.blue[900],
       ),
@@ -95,7 +95,6 @@ class _ProfileAndSettingsScreenState extends State<ProfileScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                         
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
@@ -180,7 +179,11 @@ class _ProfileAndSettingsScreenState extends State<ProfileScreen> {
                                 MaterialPageRoute(builder: (context) => const EditProfileScreen()),
                               );
                               if (result == true) {
-                                _loadUserData();
+                                await _loadUserData();
+                                // Propagate the result to DashboardScreen
+                                if (mounted) {
+                                  Navigator.pop(context, true);
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(

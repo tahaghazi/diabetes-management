@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:flutter_/services/http_service.dart';
+import 'package:diabetes_management/services/http_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({Key? key}) : super(key: key);
+  const EditProfileScreen({super.key});
 
   @override
-  _EditProfileScreenState createState() => _EditProfileScreenState();
+  EditProfileScreenState createState() => EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -55,7 +55,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (accessToken == null) {
         _showSnackBar('يرجى تسجيل الدخول مرة أخرى', Colors.red);
-        Navigator.pushReplacementNamed(context, '/login');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
         return;
       }
 
@@ -79,9 +81,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         body: requestBody,
       );
 
+      if (!mounted) return;
+
       if (response == null) {
         _showSnackBar('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى', Colors.red);
-        Navigator.pushReplacementNamed(context, '/login');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
         return;
       }
 
@@ -95,18 +101,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
 
         _showSnackBar('تم تحديث البيانات بنجاح!', Colors.green);
-        Navigator.pop(context, true);
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       } else {
         var responseData = jsonDecode(response.body);
         _showSnackBar(responseData['message'] ?? 'حدث خطأ أثناء تحديث البيانات', Colors.red);
       }
     } catch (e) {
       _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   void _cancel() {
@@ -114,6 +124,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: color),
     );
@@ -142,11 +153,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'يرجى إدخال الاسم الأول';
                     }
-                    if (!RegExp(r'^[\p{L}]+$', unicode: true).hasMatch(value)) {
-                      return 'الاسم الأول يجب أن يحتوي على حروف فقط';
+                    if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
+                      return 'الاسم الأول يجب أن يحتوي على حروف ومسافات فقط';
+                    }
+                    if (value.trim().isEmpty) {
+                      return 'الاسم الأول لا يمكن أن يكون مسافات فقط';
                     }
                     return null;
                   },
@@ -159,11 +173,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'يرجى إدخال الاسم الأخير';
                     }
-                    if (!RegExp(r'^[\p{L}]+$', unicode: true).hasMatch(value)) {
-                      return 'الاسم الأخير يجب أن يحتوي على حروف فقط';
+                    if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
+                      return 'الاسم الأخير يجب أن يحتوي على حروف ومسافات فقط';
+                    }
+                    if (value.trim().isEmpty) {
+                      return 'الاسم الأخير لا يمكن أن يكون مسافات فقط';
                     }
                     return null;
                   },
@@ -177,11 +194,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return 'يرجى إدخال التخصص';
                       }
-                      if (value.length < 3) {
+                      if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
+                        return 'التخصص يجب أن يحتوي على حروف ومسافات فقط';
+                      }
+                      if (value.trim().length < 3) {
                         return 'التخصص يجب أن يكون 3 حروف على الأقل';
+                      }
+                      if (value.trim().isEmpty) {
+                        return 'التخصص لا يمكن أن يكون مسافات فقط';
                       }
                       return null;
                     },
@@ -193,6 +216,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       labelText: 'السجل الصحي',
                       border: OutlineInputBorder(),
                     ),
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        if (!RegExp(r'^[\p{L}\s\d\-\/.,]*$', unicode: true).hasMatch(value)) {
+                          return 'السجل الصحي يجب أن يحتوي على حروف، أرقام، مسافات، أو أحرف (-/.,) فقط';
+                        }
+                        if (value.trim().isEmpty) {
+                          return 'السجل الصحي لا يمكن أن يكون مسافات فقط';
+                        }
+                      }
+                      return null;
+                    },
                   ),
                 const SizedBox(height: 20),
                 _isLoading

@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_/services/http_service.dart';
+import 'package:diabetes_management/services/http_service.dart';
+
 
 class SignUpScreen extends StatefulWidget {
   final String accountType;
 
-  SignUpScreen({required this.accountType});
+  const SignUpScreen({required this.accountType, super.key});
 
   @override
-  _SignUpScreenState createState() => _SignUpScreenState();
+  SignUpScreenState createState() => SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -36,7 +37,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       var url = Uri.parse('http://10.0.2.2:8000/api/register/');
       var requestBody = {
         'email': _emailController.text.trim(),
-        'password1': _passwordController.text.trim(), // Removed the backtick
+        'password1': _passwordController.text.trim(),
         'password2': _confirmPasswordController.text.trim(),
         'first_name': _firstNameController.text.trim(),
         'last_name': _lastNameController.text.trim(),
@@ -60,8 +61,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       var responseData = jsonDecode(utf8.decode(response.bodyBytes));
-      print('Response first_name: ${responseData['user']['first_name']}');
-      print('Response last_name: ${responseData['user']['last_name']}');
+      debugPrint('Response first_name: ${responseData['user']['first_name']}');
+      debugPrint('Response last_name: ${responseData['user']['last_name']}');
 
       if (response.statusCode == 201) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -79,12 +80,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         HttpService().setTokens(accessToken, refreshToken);
         _showSnackBar('تم إنشاء الحساب بنجاح!', Colors.green);
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       } else {
         _showSnackBar(responseData['error'] ?? 'حدث خطأ ما', Colors.red);
       }
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
       _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
     }
 
@@ -117,7 +120,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     decoration: InputDecoration(labelText: 'الاسم الأول'),
                     textDirection: TextDirection.rtl,
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'يرجى إدخال الاسم الأول';
+                      if (value == null || value.trim().isEmpty) return 'يرجى إدخال الاسم الأول';
                       return null;
                     },
                   ),
@@ -127,7 +130,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     decoration: InputDecoration(labelText: 'الاسم الأخير'),
                     textDirection: TextDirection.rtl,
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'يرجى إدخال الاسم الأخير';
+                      if (value == null || value.trim().isEmpty) return 'يرجى إدخال الاسم الأخير';
                       return null;
                     },
                   ),

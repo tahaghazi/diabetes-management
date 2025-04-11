@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class GlucoseTrackingScreen extends StatefulWidget {
+  const GlucoseTrackingScreen({super.key});
+
   @override
-  _GlucoseTrackingScreenState createState() => _GlucoseTrackingScreenState();
+  GlucoseTrackingScreenState createState() => GlucoseTrackingScreenState();
 }
 
-class _GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
+class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
   final TextEditingController _glucoseController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
@@ -15,35 +17,39 @@ class _GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
   List<Map<String, String>> glucoseReadings = [];
 
   Future<void> _selectDateTime(BuildContext context) async {
+    if (!mounted) return; // فحص مبكر لـ mounted قبل أي عملية
+
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (pickedDate != null) {
-      final TimeOfDay? pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-      if (pickedTime != null) {
-        final DateTime pickedDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
 
-        final String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDateTime);
-        final String formattedTime = DateFormat('h:mm a').format(pickedDateTime).replaceAll('AM', 'صباحًا').replaceAll('PM', 'مساءً');
+    if (pickedDate == null || !mounted) return; // فحص mounted بعد أول await
 
-        setState(() {
-          _dateController.text = formattedDate;
-          _timeController.text = formattedTime;
-        });
-      }
-    }
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (pickedTime == null || !mounted) return; // فحص mounted بعد ثاني await
+
+    final DateTime pickedDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    final String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDateTime);
+    final String formattedTime = DateFormat('h:mm a').format(pickedDateTime).replaceAll('AM', 'صباحًا').replaceAll('PM', 'مساءً');
+
+    setState(() {
+      _dateController.text = formattedDate;
+      _timeController.text = formattedTime;
+    });
   }
 
   void _addGlucoseReading() {
@@ -94,8 +100,8 @@ class _GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
           children: [
             Text(
               'أدخل مستوى السكر',
-               textAlign: TextAlign.center,
-               style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             TextField(
@@ -139,9 +145,9 @@ class _GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
               value: _selectedReadingType,
               items: ['صائم', 'قبل الأكل', 'بعد الأكل']
                   .map((type) => DropdownMenuItem(
-                value: type,
-                child: Text(type),
-              ))
+                        value: type,
+                        child: Text(type),
+                      ))
                   .toList(),
               onChanged: (value) {
                 setState(() {
@@ -161,8 +167,8 @@ class _GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
             SizedBox(height: 20),
             Text(
               ':القراءات السابقة',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
             ),
             Expanded(
               child: ListView.builder(

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AccountTypeScreen extends StatefulWidget {
+  const AccountTypeScreen({super.key});
+
   @override
-  _AccountTypeScreenState createState() => _AccountTypeScreenState();
+  AccountTypeScreenState createState() => AccountTypeScreenState();
 }
 
-class _AccountTypeScreenState extends State<AccountTypeScreen> {
+class AccountTypeScreenState extends State<AccountTypeScreen> {
   String? _selectedAccountType;
 
   void _navigateToSignUp() {
@@ -68,7 +70,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
         duration: Duration(milliseconds: 300),
         padding: EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: _selectedAccountType == value ? Colors.blue.withOpacity(0.2) : Colors.white,
+          color: _selectedAccountType == value ? Colors.blue.withValues(alpha: 0.2) : Colors.white,
           border: Border.all(color: _selectedAccountType == value ? Colors.blue : Colors.grey, width: 2),
           borderRadius: BorderRadius.circular(10),
         ),

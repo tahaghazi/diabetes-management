@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
@@ -7,35 +8,45 @@ import 'chatbot_screen.dart';
 import 'alternative_medications_screen.dart';
 import 'ai_analysis_screen.dart';
 import 'profile_screen.dart';
-import 'package:flutter_/services/http_service.dart';
-import 'package:flutter_/services/notification_service.dart';
+import 'package:diabetes_management/services/http_service.dart';
+import 'package:diabetes_management/services/notification_service.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  DashboardScreenState createState() => DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class DashboardScreenState extends State<DashboardScreen> {
   bool _showWelcomeMessage = true;
   String? _firstName;
   String? _lastName;
   String? _email;
   String? _accountType;
   String? _specialization;
+  int _notificationCount = 0;
+  Timer? _notificationTimer;
+  List<Map<String, dynamic>> _lastNotifications = [];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    Future.delayed(const Duration(seconds: 5), () {
+    _startNotificationPolling();
+    Future.delayed(Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _showWelcomeMessage = false;
         });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -46,18 +57,217 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _email = prefs.getString('user_email');
       _accountType = prefs.getString('account_type');
       _specialization = prefs.getString('specialization');
-      print('Loaded first_name: $_firstName');
-      print('Loaded last_name: $_lastName');
-      print('Loaded email: $_email');
-      print('Loaded account_type: $_accountType');
-      print('Loaded specialization: $_specialization');
+      debugPrint('Loaded first_name: $_firstName');
+      debugPrint('Loaded last_name: $_lastName');
+      debugPrint('Loaded email: $_email');
+      debugPrint('Loaded account_type: $_accountType');
+      debugPrint('Loaded specialization: $_specialization');
     });
 
     String? accessToken = prefs.getString('access_token');
     String? refreshToken = prefs.getString('refresh_token');
     if (accessToken != null && refreshToken != null) {
       HttpService().setTokens(accessToken, refreshToken);
-      print('Tokens updated in HttpService: Access Token: $accessToken, Refresh Token: $refreshToken');
+      debugPrint('Tokens updated in HttpService: Access Token: $accessToken, Refresh Token: $refreshToken');
+    }
+  }
+
+  Future<void> _updateNotificationCount() async {
+    List<Map<String, dynamic>> notifications = await NotificationService.getLoggedNotifications();
+    debugPrint('Fetched notifications: ${notifications.length}');
+    if (!mounted) return;
+    setState(() {
+      _notificationCount = notifications.length;
+      debugPrint('Updated notification count: $_notificationCount');
+    });
+
+    if (notifications.length > _lastNotifications.length) {
+      var newNotifications = notifications
+          .where((n) => !_lastNotifications.any((ln) => ln['id'] == n['id'] && ln['scheduled_time'] == n['scheduled_time']))
+          .toList();
+      debugPrint('New notifications: ${newNotifications.length}');
+      _lastNotifications = List.from(notifications);
+      if (newNotifications.isNotEmpty && mounted) {
+        debugPrint('Showing dialog for new notification: ${newNotifications.last}');
+        _showNewNotificationDialog(newNotifications.last);
+      }
+    }
+  }
+
+  void _startNotificationPolling() {
+    _notificationTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
+      if (mounted) {
+        await _updateNotificationCount();
+      }
+    });
+  }
+
+  void _showNewNotificationDialog(Map<String, dynamic> notification) {
+    DateTime scheduledTime = DateTime.parse(notification['scheduled_time']);
+    final hour = scheduledTime.hour > 12
+        ? scheduledTime.hour - 12
+        : scheduledTime.hour == 0
+            ? 12
+            : scheduledTime.hour;
+    final minute = scheduledTime.minute.toString().padLeft(2, '0');
+    final period = scheduledTime.hour >= 12 ? 'مساءً' : 'صباحًا';
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              notification['title'],
+              style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              'الوقت: $hour:$minute $period',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('إغلاق', style: TextStyle(color: Colors.teal)),
+              ),
+            ],
+          );
+        },
+      ).then((_) {
+        if (mounted) {
+          _updateNotificationCount();
+        }
+      });
+    }
+  }
+
+  void _showAllNotificationsDialog() async {
+    List<Map<String, dynamic>> loggedNotifications =
+        await NotificationService.getLoggedNotifications();
+    debugPrint('Showing all notifications dialog with ${loggedNotifications.length} notifications');
+
+    Map<String, List<Map<String, dynamic>>> notificationsByType = {
+      'تحليل السكر': [],
+      'الدواء': [],
+      'شرب الماء': [],
+    };
+
+    for (var notification in loggedNotifications) {
+      String reminderType = notification['reminder_type'];
+      String arabicType;
+      switch (reminderType) {
+        case 'blood_glucose_test':
+          arabicType = 'تحليل السكر';
+          break;
+        case 'medication':
+          arabicType = 'الدواء';
+          break;
+        case 'hydration':
+          arabicType = 'شرب الماء';
+          break;
+        default:
+          arabicType = reminderType;
+      }
+      notificationsByType[arabicType] = notificationsByType[arabicType] ?? [];
+      notificationsByType[arabicType]!.add(notification);
+    }
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: Text('الإشعارات المرسلة',
+                    style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 300,
+                  child: loggedNotifications.isEmpty
+                      ? Center(
+                          child: Text('لا توجد إشعارات حاليًا', style: TextStyle(color: Colors.grey)))
+                      : ListView(
+                          shrinkWrap: true,
+                          children: notificationsByType.entries.map((entry) {
+                            String type = entry.key;
+                            List<Map<String, dynamic>> notifications = entry.value;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  type,
+                                  style: TextStyle(
+                                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                                ),
+                                if (notifications.isEmpty)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                                    child: Text('لا توجد إشعارات مرسلة من هذا النوع',
+                                        style: TextStyle(color: Colors.grey)),
+                                  )
+                                else
+                                  ...notifications.map((notification) {
+                                    DateTime scheduledTime =
+                                        DateTime.parse(notification['scheduled_time']);
+                                    final hour = scheduledTime.hour > 12
+                                        ? scheduledTime.hour - 12
+                                        : scheduledTime.hour == 0
+                                            ? 12
+                                            : scheduledTime.hour;
+                                    final period = scheduledTime.hour >= 12 ? 'مساءً' : 'صباحًا';
+                                    return Card(
+                                      elevation: 2,
+                                      margin: EdgeInsets.symmetric(vertical: 4),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10)),
+                                      child: ListTile(
+                                        title: Text(notification['title'],
+                                            style: TextStyle(fontWeight: FontWeight.bold)),
+                                        subtitle: Text(
+                                            'الوقت: $hour:${scheduledTime.minute.toString().padLeft(2, '0')} $period'),
+                                      ),
+                                    );
+                                  }),
+                                Divider(),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: loggedNotifications.isEmpty
+                        ? null
+                        : () async {
+                            await NotificationService.clearLoggedNotifications();
+                            setState(() {
+                              loggedNotifications.clear();
+                              if (mounted) {
+                                _updateNotificationCount();
+                              }
+                            });
+                          },
+                    child: Text('مسح الكل', style: TextStyle(color: Colors.red)),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('إغلاق', style: TextStyle(color: Colors.teal)),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ).then((_) {
+        if (mounted) {
+          _updateNotificationCount();
+        }
+      });
     }
   }
 
@@ -66,129 +276,128 @@ class _DashboardScreenState extends State<DashboardScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? accessToken = prefs.getString('access_token');
 
-      print('Access Token being sent: $accessToken');
+      debugPrint('Access Token being sent: $accessToken');
 
       if (accessToken == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تسجيل الخروج')),
-        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('تم تسجيل الخروج')));
         await prefs.clear();
         HttpService().clearTokens();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
+        if (!mounted) return;
+        Navigator.of(context)
+            .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
         return;
       }
 
       final response = await HttpService().makeRequest(
         method: 'POST',
         url: Uri.parse('http://10.0.2.2:8000/api/logout/'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response == null) {
+        if (!mounted) return;
         await prefs.clear();
         HttpService().clearTokens();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
+        if (!mounted) return;
+        Navigator.of(context)
+            .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
         return;
       }
 
-      print('Response Status: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+      debugPrint('Response Status: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
 
       await prefs.clear();
       HttpService().clearTokens();
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تسجيل الخروج بنجاح')),
-        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('تم تسجيل الخروج بنجاح')));
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}')),
-        );
+            SnackBar(content: Text('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}')));
       }
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
+      if (!mounted) return;
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء تسجيل الخروج: $e')),
-      );
       SharedPreferences prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('حدث خطأ أثناء تسجيل الخروج: $e')));
       await prefs.clear();
       HttpService().clearTokens();
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
+      if (!mounted) return;
+      Navigator.of(context)
+          .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
     }
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, Widget? screen, {bool isLogout = false}) {
+  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, Widget? screen,
+      {bool isLogout = false}) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: ListTile(
         leading: Icon(icon, color: isLogout ? Colors.red : Colors.blue, size: 30),
         title: Text(title, style: TextStyle(color: isLogout ? Colors.red : Colors.black, fontSize: 18)),
-        onTap: () {
+        onTap: () async {
           if (isLogout) {
             _logout();
           } else {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
+            final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen!));
+            // إذا كان العنصر هو الملف الشخصي ورجع result بـ true، اعيد تحميل البيانات
+            if (title == 'الملف الشخصي' && result == true && mounted) {
+              await _loadUserData();
+            }
           }
         },
-        trailing: null,
       ),
     );
   }
 
-  Widget _buildDashboardButton(BuildContext context, {required String title, required String imagePath, required Widget screen}) {
+  Widget _buildDashboardButton(BuildContext context,
+      {required String title, required String imagePath, required Widget screen}) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: GestureDetector(
-        onTap: () {
-          print('Navigating to: $title');
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => screen),
-          );
+        onTap: () async {
+          debugPrint('Navigating to: $title');
+          final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
+          // Refresh data only if changes were made
+          if (title == 'الملف الشخصي' && result == true && mounted) {
+            await _loadUserData();
+          }
         },
         child: Card(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: () {
-              print('Navigating to: $title');
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => screen),
-              );
+            onTap: () async {
+              debugPrint('Navigating to: $title');
+              final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
+              // Refresh data only if changes were made
+              if (title == 'الملف الشخصي' && result == true && mounted) {
+                await _loadUserData();
+              }
             },
             child: Padding(
-              padding: const EdgeInsets.all(8.0), // Reduced padding to allow more space for content
+              padding: EdgeInsets.all(8.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Image.asset(
-                      imagePath,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                    ),
-                  ),
-                  const SizedBox(height: 8), // Reduced spacing
+                  Expanded(child: Image.asset(imagePath, fit: BoxFit.cover, width: double.infinity)),
+                  SizedBox(height: 8),
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 20, // Reduced font size to fit better
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -199,107 +408,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showNotificationsDialog() async {
-    List<Map<String, dynamic>> loggedNotifications = await NotificationService.getLoggedNotifications();
-
-    Map<String, List<Map<String, dynamic>>> notificationsByType = {
-      'قياس السكر': [],
-      'الدواء': [],
-      'شرب الماء': [],
-    };
-
-    for (var notification in loggedNotifications) {
-      String reminderType = notification['reminder_type'];
-      if (notificationsByType.containsKey(reminderType)) {
-        notificationsByType[reminderType]!.add(notification);
-      } else {
-        // Map English reminder types to Arabic for display
-        String arabicType;
-        switch (reminderType) {
-          case 'Blood Glucose Test':
-            arabicType = 'قياس السكر';
-            break;
-          case 'Medication':
-            arabicType = 'الدواء';
-            break;
-          case 'Hydration':
-            arabicType = 'شرب الماء';
-            break;
-          default:
-            arabicType = reminderType;
-        }
-        notificationsByType[arabicType] = [notification];
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('الإشعارات المرسلة'),
-          content: Container(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: notificationsByType.entries.map((entry) {
-                String type = entry.key;
-                List<Map<String, dynamic>> notifications = entry.value;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      type,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    if (notifications.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text('لا توجد إشعارات مرسلة من هذا النوع'),
-                      )
-                    else
-                      ...notifications.map((notification) {
-                        DateTime scheduledTime = DateTime.parse(notification['scheduled_time']);
-                        return ListTile(
-                          title: Text(notification['title']),
-                          subtitle: Text(
-                            'الوقت: ${scheduledTime.hour}:${scheduledTime.minute.toString().padLeft(2, '0')}',
-                          ),
-                        );
-                      }).toList(),
-                    const Divider(),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('إغلاق'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'الصفحة الرئيسية',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
+          title: Text('الصفحة الرئيسية',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
           centerTitle: true,
-          backgroundColor: Colors.blue,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  colors: [Colors.teal, Colors.tealAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight),
+            ),
+          ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white),
-              onPressed: _showNotificationsDialog,
+            Stack(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.notifications, color: Colors.white),
+                  onPressed: _showAllNotificationsDialog,
+                ),
+                if (_notificationCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration:
+                          BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                      constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        '$_notificationCount',
+                        style: TextStyle(color: Colors.white, fontSize: 10),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
@@ -309,90 +458,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Container(
                 height: 280,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.blue, Colors.blueAccent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                      colors: [Colors.teal, Colors.tealAccent],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: Offset(0, 5))
                         ],
                       ),
                       child: Image.asset(
-                        _accountType == 'doctor' ? 'assets/images/doctor_logo.png.webp' : 'assets/images/patient_logo.png.webp',
+                        _accountType == 'doctor'
+                            ? 'assets/images/doctor_logo.png.webp'
+                            : 'assets/images/patient_logo.png.webp',
                         height: 80,
                         width: 80,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                     Text(
                       '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _email ?? 'الإيميل',
-                      style: const TextStyle(color: Colors.white70, fontSize: 18),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _accountType == 'doctor' ? 'دكتور' : 'مريض',
-                      style: const TextStyle(color: Colors.white70, fontSize: 18),
-                      textAlign: TextAlign.center,
-                    ),
+                    SizedBox(height: 12),
+                    Text(_email ?? 'الإيميل',
+                        style: TextStyle(color: Colors.white70, fontSize: 18),
+                        textAlign: TextAlign.center),
+                    SizedBox(height: 12),
+                    Text(_accountType == 'doctor' ? 'دكتور' : 'مريض',
+                        style: TextStyle(color: Colors.white70, fontSize: 18),
+                        textAlign: TextAlign.center),
                   ],
                 ),
               ),
-              _buildDrawerItem(context, 'تتبع مستوى السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
+              _buildDrawerItem(context, 'تتبع تحليل السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
               _buildDrawerItem(context, 'التذكيرات', Icons.notifications, RemindersScreen()),
               _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
-              _buildDrawerItem(context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
+              _buildDrawerItem(
+                  context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
               _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
               _buildDrawerItem(context, 'الملف الشخصي', Icons.person, ProfileScreen()),
-              const Divider(),
-              const Spacer(),
+              Divider(),
+              Spacer(),
               _buildDrawerItem(context, 'تسجيل الخروج', Icons.logout, null, isLogout: true),
             ],
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0), // Reduced padding to maximize space
-          child: Column(
-            children: [
-              if (_showWelcomeMessage)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 20),
-                  child: Text(
-                    'مرحبًا بك في تطبيق إدارة مرض السكري',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
-                    textAlign: TextAlign.center,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                colors: [Colors.teal[50]!, Colors.white],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                if (_showWelcomeMessage)
+                  Padding(
+                    padding: EdgeInsets.only(top: 20),
+                    child: Text(
+                      'مرحبًا بك في تطبيق إدارة مرض السكري',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.teal),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              Expanded(
-                child: DashboardGrid(
-                  buildDashboardButton: _buildDashboardButton,
-                ),
-              ),
-            ],
+                Expanded(child: DashboardGrid(buildDashboardButton: _buildDashboardButton)),
+              ],
+            ),
           ),
         ),
       ),
@@ -401,9 +546,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class DashboardGrid extends StatelessWidget {
-  final Widget Function(BuildContext context, {required String title, required String imagePath, required Widget screen}) buildDashboardButton;
+  final Widget Function(BuildContext context,
+      {required String title, required String imagePath, required Widget screen}) buildDashboardButton;
 
-  const DashboardGrid({Key? key, required this.buildDashboardButton}) : super(key: key);
+  const DashboardGrid({super.key, required this.buildDashboardButton});
 
   @override
   Widget build(BuildContext context) {
@@ -411,9 +557,9 @@ class DashboardGrid extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 8, // Reduced spacing
-        mainAxisSpacing: 8, // Reduced spacing
-        childAspectRatio: 0.85, // Adjusted to make boxes taller and fit better
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 0.85,
       ),
       itemCount: _dashboardItems.length,
       itemBuilder: (context, index) {
@@ -431,33 +577,33 @@ class DashboardGrid extends StatelessWidget {
 
 final List<Map<String, dynamic>> _dashboardItems = [
   {
-    'title': 'تتبع مستوى السكر',
+    'title': 'تتبع تحليل السكر',
     'imagePath': 'assets/images/glucose_tracking.png.webp',
-    'screen': GlucoseTrackingScreen(),
+    'screen': const GlucoseTrackingScreen(),
   },
   {
     'title': 'التذكيرات',
     'imagePath': 'assets/images/reminders.png.webp',
-    'screen': RemindersScreen(),
+    'screen': const RemindersScreen(),
   },
   {
     'title': 'التنبؤ بمرض السكر',
     'imagePath': 'assets/images/ai_analysis.png.webp',
-    'screen': AIAnalysisScreen(),
+    'screen': const AIAnalysisScreen(),
   },
   {
     'title': 'الأدوية البديلة',
     'imagePath': 'assets/images/medications.png.webp',
-    'screen': AlternativeMedicationsScreen(),
+    'screen': const AlternativeMedicationsScreen(),
   },
   {
     'title': 'الشات بوت',
     'imagePath': 'assets/images/chatbot.png.webp',
-    'screen': ChatbotScreen(),
+    'screen': const ChatbotScreen(),
   },
   {
     'title': 'الملف الشخصي',
     'imagePath': 'assets/images/profile.png.webp',
-    'screen': ProfileScreen(),
+    'screen': const ProfileScreen(),
   },
 ];

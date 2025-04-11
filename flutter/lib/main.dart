@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // إضافة لدعم الترجمة
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/sign_up_screen.dart';
@@ -11,13 +11,17 @@ import 'screens/profile_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/alternative_medications_screen.dart';
 import 'screens/account_type_screen.dart';
-import 'screens/reset_password_screen.dart';
+import 'package:diabetes_management/services/notification_service.dart';
 
-void main() {
-  runApp(DiabetesApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();     
+  await NotificationService.init();    
+  runApp(const DiabetesApp());
 }
 
 class DiabetesApp extends StatelessWidget {
+  const DiabetesApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -33,8 +37,7 @@ class DiabetesApp extends StatelessWidget {
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.blue[700],
           elevation: 0,
-          titleTextStyle: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         buttonTheme: ButtonThemeData(
           buttonColor: Colors.blue[600],
@@ -64,9 +67,8 @@ class DiabetesApp extends StatelessWidget {
           ),
         ),
       ),
-      // إضافة دعم اللغة العربية
-      locale: Locale('ar'), // تعيين اللغة العربية كلغة افتراضية
-      supportedLocales: [Locale('ar')], // اللغات المدعومة
+      locale: Locale('ar'),
+      supportedLocales: [Locale('ar')],
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

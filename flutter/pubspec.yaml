@@ -1,4 +1,4 @@
-name: flutter_
+name: diabetes_management
 description: "A new Flutter project."
 publish_to: 'none'
 
@@ -10,21 +10,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # حزم خارجية
-  http: ^1.2.2          # تحديث إلى إصدار أحدث
+  http: ^1.2.2
   app_links: ^6.4.0
-  shared_preferences: ^2.2.0
   url_launcher: ^6.3.1
+  shared_preferences: ^2.2.0
   intl: ^0.19.0
-  flutter_local_notifications: ^17.2.1  # متوافق مع Android 9
-  timezone: ^0.9.2  # أضيفت لدعم المناطق الزمنية للإشعارات
-
-  # حزم من الـ SDK
+  flutter_local_notifications: ^17.2.1
+  timezone: ^0.9.2
+  cupertino_icons: ^1.0.8
   flutter_localizations:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  
+  logger: ^2.0.2+1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -34,10 +31,10 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/app_icon.png"  # تصحيح الامتداد
+  image_path: "assets/images/app_icon.png"
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/images/
+   
