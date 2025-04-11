@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_/services/http_service.dart';
+import 'package:diabetes_management/services/http_service.dart';
 import 'dart:convert';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
 
-  const ResetPasswordScreen({Key? key, required this.email}) : super(key: key);
+  const ResetPasswordScreen({super.key, required this.email});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -51,43 +51,55 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           'otp': otp,
           'new_password': newPassword,
           'confirm_new_password': confirmPassword,
-        }, // رجعنا الـ body يكون map
+        },
       );
 
       if (response == null) {
-        print('Response is null');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل الاتصال بالخادم. تأكد من أن الخادم يعمل.')),
-        );
+        debugPrint('Response is null');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('فشل الاتصال بالخادم. تأكد من أن الخادم يعمل.')),
+          );
+        }
         return;
       }
 
-      print('Response Status: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+      debugPrint('Response Status: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إعادة تعيين كلمة المرور بنجاح')),
-        );
-        await Future.delayed(const Duration(seconds: 1));
-        Navigator.of(context).pop();
-        Navigator.of(context).pop();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تم إعادة تعيين كلمة المرور بنجاح')),
+          );
+          await Future.delayed(Duration(seconds: 1));
+          if (mounted) {
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
+          }
+        }
       } else {
         var responseBody = response.body.isNotEmpty ? jsonDecode(response.body) : {};
         String errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إعادة التعيين (كود الحالة: ${response.statusCode})';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage)),
+          );
+        }
       }
     } catch (e) {
-      print('Error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ: ${e.toString()}')),
-      );
+      debugPrint('Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ: ${e.toString()}')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -95,31 +107,31 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("إعادة تعيين كلمة المرور"),
+        title: Text("إعادة تعيين كلمة المرور"),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back),
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: EdgeInsets.all(20.0),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 20),
-                const Text(
+                SizedBox(height: 20),
+                Text(
                   "أدخل الكود المكون من 6 أرقام الذي تلقيته عبر البريد الإلكتروني",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 TextFormField(
                   controller: _codeController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "الكود",
                     border: OutlineInputBorder(),
                     counterText: "",
@@ -135,14 +147,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 TextFormField(
                   controller: _newPasswordController,
                   obscureText: _isObscure1,
                   decoration: InputDecoration(
                     labelText: "كلمة المرور الجديدة",
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(_isObscure1 ? Icons.visibility : Icons.visibility_off),
                       onPressed: () {
@@ -162,14 +174,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _isObscure2,
                   decoration: InputDecoration(
                     labelText: "تأكيد كلمة المرور",
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(_isObscure2 ? Icons.visibility : Icons.visibility_off),
                       onPressed: () {
@@ -186,15 +198,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _resetPassword,
                   style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
+                    minimumSize: Size(double.infinity, 50),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text("إعادة تعيين كلمة المرور"),
+                      ? CircularProgressIndicator()
+                      : Text("إعادة تعيين كلمة المرور"),
                 ),
               ],
             ),

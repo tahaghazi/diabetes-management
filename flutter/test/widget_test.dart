@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_/main.dart'; // تأكد من استيراد DiabetesApp من main.dart
+import 'package:diabetes_management/main.dart'; // تعديل المسار إلى diabetes_management
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // بناء التطبيق وتحفيز الإطار.
-    await tester.pumpWidget(DiabetesApp()); // استخدم DiabetesApp بدلاً من MyApp
+    await tester.pumpWidget(DiabetesApp()); // استخدم DiabetesApp كما هو
 
     // التحقق من أن العداد يبدأ من 0.
     expect(find.text('0'), findsOneWidget);

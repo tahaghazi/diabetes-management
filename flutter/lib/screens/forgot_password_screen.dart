@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_/services/http_service.dart';
+import 'package:diabetes_management/services/http_service.dart';
 import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
+
   @override
-  _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
+  ForgotPasswordScreenState createState() => ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
 
@@ -22,53 +24,70 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(email);
   }
 
-  void _sendOTP(BuildContext context) async {
-    String email = _emailController.text.trim();
+  Future<void> _sendOTP() async {
+    if (!mounted) return;
+
+    final email = _emailController.text.trim();
 
     if (email.isEmpty) {
-      _showSnackBar(context, 'يرجى إدخال البريد الإلكتروني', Colors.red);
-    } else if (!isValidEmail(email)) {
-      _showSnackBar(context, 'يرجى إدخال بريد إلكتروني صحيح', Colors.orange);
-    } else {
-      try {
-        setState(() {
-          _isLoading = true;
-        });
+      if (mounted) {
+        _showSnackBar('يرجى إدخال البريد الإلكتروني', Colors.red);
+      }
+      return;
+    }
 
-        var response = await HttpService().makeRequest(
-          method: 'POST',
-          url: Uri.parse('http://10.0.2.2:8000/api/password_reset/'),
-          headers: {'Content-Type': 'application/json'},
-          body: {'email': email}, // رجعنا الـ body يكون map
-        );
+    if (!isValidEmail(email)) {
+      if (mounted) {
+        _showSnackBar('يرجى إدخال بريد إلكتروني صحيح', Colors.orange);
+      }
+      return;
+    }
 
-        if (response == null) {
-          print('Response is null');
-          _showSnackBar(context, 'فشل الاتصال بالخادم. تأكد من أن الخادم يعمل.', Colors.red);
-          return;
-        }
+    try {
+      setState(() {
+        _isLoading = true;
+      });
 
-        print('Response Status: ${response.statusCode}');
-        print('Response Body: ${response.body}');
+      final response = await HttpService().makeRequest(
+        method: 'POST',
+        url: Uri.parse('http://10.0.2.2:8000/api/password_reset/'),
+        headers: {'Content-Type': 'application/json'},
+        body: {'email': email},
+      );
 
-        if (response.statusCode == 200) {
-          _showSnackBar(context, 'تم إرسال الكود بنجاح على الإيميل!', Colors.green);
-          await Future.delayed(const Duration(seconds: 1));
-          Navigator.push(
-            context,
+      if (!mounted) return;
+
+      if (response == null) {
+        debugPrint('Response is null');
+        _showSnackBar('فشل الاتصال بالخادم. تأكد من أن الخادم يعمل.', Colors.red);
+        return;
+      }
+
+      debugPrint('Response Status: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        _showSnackBar('تم إرسال الكود بنجاح على الإيميل!', Colors.green);
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ResetPasswordScreen(email: email),
             ),
           );
-        } else {
-          var responseBody = response.body.isNotEmpty ? jsonDecode(response.body) : {};
-          String errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إرسال الكود (كود الحالة: ${response.statusCode})';
-          _showSnackBar(context, errorMessage, Colors.red);
         }
-      } catch (e) {
-        print('Error: $e');
-        _showSnackBar(context, 'حدث خطأ: $e', Colors.red);
-      } finally {
+      } else {
+        final responseBody = response.body.isNotEmpty ? jsonDecode(response.body) : {};
+        final errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إرسال الكود (كود الحالة: ${response.statusCode})';
+        _showSnackBar(errorMessage, Colors.red);
+      }
+    } catch (e) {
+      debugPrint('Error: $e');
+      if (mounted) {
+        _showSnackBar('حدث خطأ: $e', Colors.red);
+      }
+    } finally {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -76,7 +95,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _showSnackBar(BuildContext context, String message, Color color) {
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(color: Colors.white)),
@@ -119,7 +139,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _isLoading ? null : () => _sendOTP(context),
+              onPressed: _isLoading ? null : _sendOTP,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
               ),

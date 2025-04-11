@@ -3,14 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_screen.dart';
 import 'account_type_screen.dart';
-import 'package:flutter_/services/http_service.dart';
+import 'package:diabetes_management/services/http_service.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -47,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
         method: 'POST',
         url: Uri.parse(_apiUrl),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: {'email': email, 'password': password}, // عدلنا هنا: شيلنا jsonEncode
+        body: {'email': email, 'password': password},
       );
 
       if (response == null) {
@@ -57,8 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       var data = jsonDecode(utf8.decode(response.bodyBytes));
 
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      debugPrint("Response Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -73,15 +75,16 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString('specialization', data['user']['specialization'] ?? '');
         await prefs.setString('medical_history', data['user']['medical_history'] ?? '');
 
-        // حفظ الـ tokens في HttpService
         HttpService().setTokens(accessToken, refreshToken);
 
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => DashboardScreen()),
-        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => DashboardScreen()),
+          );
+        }
       } else if (response.statusCode == 401) {
         _showSnackBar(data['error'] ?? 'كلمة المرور أو البريد الإلكتروني غير صحيحة', Colors.red);
       } else if (response.statusCode == 400) {
@@ -93,15 +96,18 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
-      print("Error: $e");
+      debugPrint("Error: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: TextStyle(color: Colors.white)),
