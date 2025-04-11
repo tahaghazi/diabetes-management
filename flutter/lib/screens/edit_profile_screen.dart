@@ -218,9 +218,9 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     validator: (value) {
                       if (value != null && value.isNotEmpty) {
-                        if (!RegExp(r'^[\p{L}\s\d\-\/.,]*$', unicode: true).hasMatch(value)) {
-                          return 'السجل الصحي يجب أن يحتوي على حروف، أرقام، مسافات، أو أحرف (-/.,) فقط';
-                        }
+                       if (!RegExp(r'^[\p{L}\s\d\u0660-\u0669\-\/.,]*$', unicode: true).hasMatch(value)) {
+                        return 'السجل الصحي يجب أن يحتوي على حروف، أرقام فقط';
+                      }
                         if (value.trim().isEmpty) {
                           return 'السجل الصحي لا يمكن أن يكون مسافات فقط';
                         }
