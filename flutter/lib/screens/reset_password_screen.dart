@@ -80,7 +80,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         }
       } else {
         var responseBody = response.body.isNotEmpty ? jsonDecode(response.body) : {};
-        String errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إعادة التعيين (كود الحالة: ${response.statusCode})';
+        String errorMessage;
+        if (responseBody['error'] == 'Invalid OTP') {
+          errorMessage = 'الكود غير صحيح .. من فضلك ادخل الكود الصحيح';
+        } else {
+          errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إعادة التعيين (كود الحالة: ${response.statusCode})';
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage)),
@@ -144,6 +149,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     if (value.length != 6) {
                       return "يجب أن يكون الكود مكونًا من 6 أرقام";
                     }
+                    if (!RegExp(r'^[\d\u0660-\u0669]{6}$').hasMatch(value)) {
+                      return "يجب أن يحتوي الكود على أرقام فقط ";
+                    }
                     return null;
                   },
                 ),
@@ -174,7 +182,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 10),
+                Text(
+                  "يرجى اختيار كلمة مرور جديدة مختلفة عن كلمة المرور السابقة لضمان الأمان",
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 10),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _isObscure2,
