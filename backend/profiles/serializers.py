@@ -52,3 +52,13 @@ class DoctorPatientRelationSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorPatientRelation
         fields = ['id', 'doctor']
+
+class PatientProfileSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='patientprofile.first_name')
+    last_name = serializers.CharField(source='patientprofile.last_name')
+    medical_history = serializers.CharField(source='patientprofile.medical_history', allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'medical_history']
+
