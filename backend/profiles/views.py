@@ -52,12 +52,15 @@ def search_doctors(request):
         return Response({"error": "Only patients can search for doctors"}, status=status.HTTP_403_FORBIDDEN)
 
     query = request.GET.get('query', '')
+    if not query:
+        return Response([])
+
     doctors = User.objects.filter(
         doctorprofile__isnull=False, 
-        first_name__icontains=query
+        doctorprofile__first_name__icontains=query  
     ) | User.objects.filter(
         doctorprofile__isnull=False,
-        last_name__icontains=query
+        doctorprofile__last_name__icontains=query  
     ) | User.objects.filter(
         doctorprofile__isnull=False,
         doctorprofile__specialization__icontains=query
@@ -85,5 +88,27 @@ def link_patient_to_doctor(request):
         relation = DoctorPatientRelation(doctor=doctor, patient=user)
         relation.save()
         return Response({"message": "Successfully linked to the doctor"}, status=status.HTTP_201_CREATED)
+    except User.DoesNotExist:
+        return Response({"error": "Doctor not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unlink_from_doctor(request):
+    user = request.user
+    if not hasattr(user, 'patientprofile'):
+        return Response({"error": "Only patients can unlink from a doctor"}, status=status.HTTP_403_FORBIDDEN)
+
+    doctor_id = request.data.get('doctor_id')
+    if not doctor_id:
+        return Response({"error": "Doctor ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        doctor = User.objects.get(id=doctor_id, doctorprofile__isnull=False)
+        relation = DoctorPatientRelation.objects.filter(doctor=doctor, patient=user).first()
+        if not relation:
+            return Response({"error": "You are not linked to this doctor"}, status=status.HTTP_400_BAD_REQUEST)
+
+        relation.delete()
+        return Response({"message": "Successfully unlinked from the doctor"}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "Doctor not found"}, status=status.HTTP_404_NOT_FOUND)
