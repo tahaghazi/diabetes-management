@@ -8,8 +8,11 @@ from .serializers import DailyReminderSerializer
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_daily_reminder(request):
+    user = request.user
+    if not hasattr(user, 'patientprofile'):
+        return Response({"error": "Only patients can create reminders"}, status=status.HTTP_403_FORBIDDEN)
+
     try:
-        user = request.user
         data = request.data
         serializer = DailyReminderSerializer(data=data)
         if serializer.is_valid():
@@ -23,6 +26,9 @@ def create_daily_reminder(request):
 @permission_classes([IsAuthenticated])
 def get_daily_reminders(request):
     user = request.user  
+    if not hasattr(user, 'patientprofile'):
+        return Response({"error": "Only patients can view reminders"}, status=status.HTTP_403_FORBIDDEN)
+
     reminders = DailyReminder.objects.filter(user=user, active=True)  
     serializer = DailyReminderSerializer(reminders, many=True)  
     return Response(serializer.data) 
@@ -30,8 +36,12 @@ def get_daily_reminders(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_daily_reminder(request, reminder_id):
+    user = request.user
+    if not hasattr(user, 'patientprofile'):
+        return Response({"error": "Only patients can update reminders"}, status=status.HTTP_403_FORBIDDEN)
+
     try:
-        reminder = DailyReminder.objects.get(id=reminder_id, user=request.user)
+        reminder = DailyReminder.objects.get(id=reminder_id, user=user)
         serializer = DailyReminderSerializer(reminder, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -43,8 +53,12 @@ def update_daily_reminder(request, reminder_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_daily_reminder(request, reminder_id):
+    user = request.user
+    if not hasattr(user, 'patientprofile'):
+        return Response({"error": "Only patients can delete reminders"}, status=status.HTTP_403_FORBIDDEN)
+
     try:
-        reminder = DailyReminder.objects.get(id=reminder_id, user=request.user)
+        reminder = DailyReminder.objects.get(id=reminder_id, user=user)
         reminder.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     except DailyReminder.DoesNotExist:
