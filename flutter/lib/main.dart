@@ -11,11 +11,13 @@ import 'screens/profile_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/alternative_medications_screen.dart';
 import 'screens/account_type_screen.dart';
+import 'screens/reset_password_screen.dart';
 import 'package:diabetes_management/services/notification_service.dart';
+import 'config/theme.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();     
-  await NotificationService.init();    
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   runApp(const DiabetesApp());
 }
 
@@ -27,65 +29,29 @@ class DiabetesApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Diabetes Management',
-      theme: ThemeData(
-        primaryColor: Colors.blue[600],
-        scaffoldBackgroundColor: Colors.blue[50],
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(fontSize: 16, color: Colors.black87),
-          bodyMedium: TextStyle(fontSize: 14, color: Colors.black54),
-        ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.blue[700],
-          elevation: 0,
-          titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        buttonTheme: ButtonThemeData(
-          buttonColor: Colors.blue[600],
-          textTheme: ButtonTextTheme.primary,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue[600],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Colors.blueGrey.shade300, width: 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Colors.blue, width: 2),
-          ),
-        ),
-      ),
-      locale: Locale('ar'),
-      supportedLocales: [Locale('ar')],
-      localizationsDelegates: [
+      theme: AppTheme.lightTheme,
+      locale: const Locale('ar'),
+      supportedLocales: const [Locale('ar')],
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       initialRoute: '/',
       routes: {
-        '/': (context) => LoginScreen(),
-        '/dashboard': (context) => DashboardScreen(),
-        '/glucose_tracking': (context) => GlucoseTrackingScreen(),
-        '/reminders': (context) => RemindersScreen(),
-        '/ai_analysis': (context) => AIAnalysisScreen(),
-        '/profile_settings': (context) => ProfileScreen(),
-        '/forgot_password': (context) => ForgotPasswordScreen(),
-        '/chatbot': (context) => ChatbotScreen(),
-        '/alternative_medications': (context) => AlternativeMedicationsScreen(),
-        '/account_type': (context) => AccountTypeScreen(),
+        '/': (context) => const LoginScreen(),
+        '/dashboard': (context) => const DashboardScreen(),
+        '/glucose_tracking': (context) => const GlucoseTrackingScreen(),
+        '/reminders': (context) => const RemindersScreen(),
+        '/ai_analysis': (context) => const AIAnalysisScreen(),
+        '/profile_settings': (context) => const ProfileScreen(),
+        '/forgot_password': (context) => const ForgotPasswordScreen(),
+        '/reset_password': (context) => ResetPasswordScreen(
+              email: ModalRoute.of(context)!.settings.arguments as String,
+            ),
+        '/chatbot': (context) => const ChatbotScreen(),
+        '/alternative_medications': (context) => const AlternativeMedicationsScreen(),
+        '/account_type': (context) => const AccountTypeScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/sign_up') {

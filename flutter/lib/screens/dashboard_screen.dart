@@ -10,6 +10,7 @@ import 'ai_analysis_screen.dart';
 import 'profile_screen.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
+import 'package:diabetes_management/config/theme.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -34,7 +35,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _loadUserData();
     _startNotificationPolling();
-    Future.delayed(Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _showWelcomeMessage = false;
@@ -52,9 +53,9 @@ class DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _firstName = prefs.getString('first_name');
-      _lastName = prefs.getString('last_name');
-      _email = prefs.getString('user_email');
+      _firstName = prefs.getString('first_name') ?? 'غير متوفر';
+      _lastName = prefs.getString('last_name') ?? '';
+      _email = prefs.getString('user_email') ?? 'غير متوفر';
       _accountType = prefs.getString('account_type');
       _specialization = prefs.getString('specialization');
       debugPrint('Loaded first_name: $_firstName');
@@ -95,7 +96,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _startNotificationPolling() {
-    _notificationTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
+    _notificationTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (mounted) {
         await _updateNotificationCount();
       }
@@ -112,6 +113,26 @@ class DashboardScreenState extends State<DashboardScreen> {
     final minute = scheduledTime.minute.toString().padLeft(2, '0');
     final period = scheduledTime.hour >= 12 ? 'مساءً' : 'صباحًا';
 
+    IconData notificationIcon;
+    Color notificationColor;
+    switch (notification['reminder_type'].toLowerCase()) {
+      case 'blood_glucose_test':
+        notificationIcon = Icons.monitor_heart;
+        notificationColor = Colors.teal;
+        break;
+      case 'hydration':
+        notificationIcon = Icons.water_drop;
+        notificationColor = Colors.tealAccent;
+        break;
+      case 'medication':
+        notificationIcon = Icons.medical_services;
+        notificationColor = Colors.teal;
+        break;
+      default:
+        notificationIcon = Icons.notifications_active;
+        notificationColor = Theme.of(context).primaryColor;
+    }
+
     if (mounted) {
       showDialog(
         context: context,
@@ -119,20 +140,56 @@ class DashboardScreenState extends State<DashboardScreen> {
         builder: (context) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text(
-              notification['title'],
-              style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
+            backgroundColor: Colors.white,
+            contentPadding: const EdgeInsets.all(20),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  notificationIcon,
+                  size: 40,
+                  color: notificationColor,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  notification['title'],
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: notificationColor),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.access_time, size: 20, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'الوقت: $hour:$minute $period',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+                if (notification['reminder_type'].toLowerCase() == 'medication' &&
+                    notification['medication_name'] != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'الدواء: ${notification['medication_name']}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'إغلاق',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ],
             ),
-            content: Text(
-              'الوقت: $hour:$minute $period',
-              style: TextStyle(fontSize: 16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('إغلاق', style: TextStyle(color: Colors.teal)),
-              ),
-            ],
           );
         },
       ).then((_) {
@@ -144,8 +201,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showAllNotificationsDialog() async {
-    List<Map<String, dynamic>> loggedNotifications =
-        await NotificationService.getLoggedNotifications();
+    List<Map<String, dynamic>> loggedNotifications = await NotificationService.getLoggedNotifications();
     debugPrint('Showing all notifications dialog with ${loggedNotifications.length} notifications');
 
     if (mounted) {
@@ -158,7 +214,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 title: Text(
                   'الإشعارات المرسلة',
-                  style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 content: SizedBox(
                   width: double.maxFinite,
@@ -167,7 +223,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                       ? Center(
                           child: Text(
                             'لا توجد إشعارات حاليًا',
-                            style: TextStyle(color: Colors.grey),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                           ),
                         )
                       : ListView.builder(
@@ -192,22 +248,21 @@ class DashboardScreenState extends State<DashboardScreen> {
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: Colors.teal.withOpacity(0.2)),
                                 ),
-                                padding: EdgeInsets.all(8.0),
+                                padding: const EdgeInsets.all(8.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       notification['title'],
-                                      style: TextStyle(
-                                        color: Colors.teal,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context).primaryColor,
+                                          ),
                                     ),
-                                    SizedBox(height: 4),
+                                    const SizedBox(height: 4),
                                     Text(
                                       'الوقت: $hour:$minute $period',
-                                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                                      style: Theme.of(context).textTheme.bodyMedium,
                                     ),
                                   ],
                                 ),
@@ -229,11 +284,21 @@ class DashboardScreenState extends State<DashboardScreen> {
                               }
                             });
                           },
-                    child: Text('مسح الكل', style: TextStyle(color: Colors.red)),
+                    child: Text(
+                      'مسح الكل',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: loggedNotifications.isEmpty ? Colors.grey : Colors.teal,
+                          ),
+                    ),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('إغلاق', style: TextStyle(color: Colors.teal)),
+                    child: Text(
+                      'إغلاق',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.teal,
+                          ),
+                    ),
                   ),
                 ],
               );
@@ -257,13 +322,13 @@ class DashboardScreenState extends State<DashboardScreen> {
 
       if (accessToken == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('تم تسجيل الخروج')));
+        _showSnackBar('تم تسجيل الخروج', Colors.green);
         await prefs.clear();
         HttpService().clearTokens();
         if (!mounted) return;
-        Navigator.of(context)
-            .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
         return;
       }
 
@@ -278,8 +343,9 @@ class DashboardScreenState extends State<DashboardScreen> {
         await prefs.clear();
         HttpService().clearTokens();
         if (!mounted) return;
-        Navigator.of(context)
-            .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
         return;
       }
 
@@ -291,42 +357,73 @@ class DashboardScreenState extends State<DashboardScreen> {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('تم تسجيل الخروج بنجاح')));
+        _showSnackBar('تم تسجيل الخروج بنجاح', Colors.green);
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}')));
+        _showSnackBar('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}', Colors.red);
       }
 
       if (!mounted) return;
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     } catch (e) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('حدث خطأ أثناء تسجيل الخروج: $e')));
+      _showSnackBar('حدث خطأ أثناء تسجيل الخروج: $e', Colors.red);
       await prefs.clear();
       HttpService().clearTokens();
       if (!mounted) return;
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     }
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, Widget? screen,
-      {bool isLogout = false}) {
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Widget? screen, {
+    bool isLogout = false,
+  }) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: ListTile(
-        leading: Icon(icon, color: isLogout ? Colors.red : Colors.blue, size: 30),
-        title: Text(title, style: TextStyle(color: isLogout ? Colors.red : Colors.black, fontSize: 18)),
+        leading: Icon(
+          icon,
+          color: isLogout ? Colors.red : Theme.of(context).primaryColor,
+          size: 30,
+        ),
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isLogout ? Colors.red : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
         onTap: () async {
           if (isLogout) {
             _logout();
           } else {
-            final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen!));
+            final result = await Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => screen!),
+            );
             if (title == 'الملف الشخصي' && result == true && mounted) {
               await _loadUserData();
             }
@@ -336,45 +433,53 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDashboardButton(BuildContext context,
-      {required String title, required String imagePath, required Widget screen}) {
+  Widget _buildDashboardButton(
+    BuildContext context, {
+    required String title,
+    required String imagePath,
+    required Widget screen,
+  }) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: GestureDetector(
-        onTap: () async {
-          debugPrint('Navigating to: $title');
-          final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
-          if (title == 'الملف الشخصي' && result == true && mounted) {
-            await _loadUserData();
-          }
-        },
-        child: Card(
-          elevation: 4.0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () async {
-              debugPrint('Navigating to: $title');
-              final result = await Navigator.of(context).push(MaterialPageRoute(builder: (context) => screen));
-              if (title == 'الملف الشخصي' && result == true && mounted) {
-                await _loadUserData();
-              }
-            },
-            child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(child: Image.asset(imagePath, fit: BoxFit.cover, width: double.infinity)),
-                  SizedBox(height: 8),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () async {
+            debugPrint('Navigating to: $title');
+            final result = await Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => screen),
+            );
+            if (title == 'الملف الشخصي' && result == true && mounted) {
+              await _loadUserData();
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Image.asset(
+                    imagePath,
+                    fit: BoxFit.contain,
+                    width: double.infinity,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                ),
+              ],
             ),
           ),
         ),
@@ -388,22 +493,21 @@ class DashboardScreenState extends State<DashboardScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('الصفحة الرئيسية',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+          title: Text(
+            'الصفحة الرئيسية',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
           centerTitle: true,
           flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [Colors.teal, Colors.tealAccent],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight),
+            decoration: const BoxDecoration(
+              gradient: AppTheme.appBarGradient,
             ),
           ),
           actions: [
             Stack(
               children: [
                 IconButton(
-                  icon: Icon(Icons.notifications, color: Colors.white),
+                  icon: const Icon(Icons.notifications),
                   onPressed: _showAllNotificationsDialog,
                 ),
                 if (_notificationCount > 0)
@@ -411,13 +515,15 @@ class DashboardScreenState extends State<DashboardScreen> {
                     right: 8,
                     top: 8,
                     child: Container(
-                      padding: EdgeInsets.all(2),
-                      decoration:
-                          BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                      constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         '$_notificationCount',
-                        style: TextStyle(color: Colors.white, fontSize: 10),
+                        style: const TextStyle(color: Colors.white, fontSize: 10),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -427,85 +533,129 @@ class DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Container(
-                height: 280,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [Colors.teal, Colors.tealAccent],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: Offset(0, 5))
-                        ],
-                      ),
-                      child: Image.asset(
-                        _accountType == 'doctor'
-                            ? 'assets/images/doctor_logo.png.webp'
-                            : 'assets/images/patient_logo.png.webp',
-                        height: 80,
-                        width: 80,
-                      ),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                DrawerHeader(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  decoration: const BoxDecoration(
+                    gradient: AppTheme.appBarGradient,
+                  ),
+                  child: SizedBox(
+                    height: 400,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          _accountType == 'doctor'
+                              ? 'assets/images/doctor_logo.png.webp'
+                              : 'assets/images/patient_logo.png.webp',
+                          height: 60,
+                          width: 60,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _email ?? 'الإيميل',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 18,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _accountType == 'doctor' ? 'دكتور' : 'مريض',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 18,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 20),
-                    Text(
-                      '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
-                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 12),
-                    Text(_email ?? 'الإيميل',
-                        style: TextStyle(color: Colors.white70, fontSize: 18),
-                        textAlign: TextAlign.center),
-                    SizedBox(height: 12),
-                    Text(_accountType == 'doctor' ? 'دكتور' : 'مريض',
-                        style: TextStyle(color: Colors.white70, fontSize: 18),
-                        textAlign: TextAlign.center),
-                  ],
+                  ),
                 ),
-              ),
-              _buildDrawerItem(context, 'تتبع تحليل السكر', Icons.monitor_heart, GlucoseTrackingScreen()),
-              _buildDrawerItem(context, 'التذكيرات', Icons.notifications, RemindersScreen()),
-              _buildDrawerItem(context, 'التنبؤ بمرض السكر', Icons.analytics, AIAnalysisScreen()),
-              _buildDrawerItem(
-                  context, 'الأدوية البديلة', Icons.medical_services, AlternativeMedicationsScreen()),
-              _buildDrawerItem(context, 'الشات بوت', Icons.chat, ChatbotScreen()),
-              _buildDrawerItem(context, 'الملف الشخصي', Icons.person, ProfileScreen()),
-              Divider(),
-              Spacer(),
-              _buildDrawerItem(context, 'تسجيل الخروج', Icons.logout, null, isLogout: true),
-            ],
+                _buildDrawerItem(
+                  context,
+                  'الملف الشخصي',
+                  Icons.person,
+                  const ProfileScreen(),
+                ),
+                _buildDrawerItem(
+                  context,
+                  'تتبع تحليل السكر',
+                  Icons.monitor_heart,
+                  const GlucoseTrackingScreen(),
+                ),
+                _buildDrawerItem(
+                  context,
+                  'التذكيرات',
+                  Icons.notifications,
+                  const RemindersScreen(),
+                ),
+                _buildDrawerItem(
+                  context,
+                  'التنبؤ بمرض السكر',
+                  Icons.analytics,
+                  const AIAnalysisScreen(),
+                ),
+                _buildDrawerItem(
+                  context,
+                  'الأدوية البديلة',
+                  Icons.medical_services,
+                  const AlternativeMedicationsScreen(),
+                ),
+                _buildDrawerItem(
+                  context,
+                  'الشات بوت',
+                  Icons.chat,
+                  const ChatbotScreen(),
+                ),
+                const Divider(),
+                _buildDrawerItem(
+                  context,
+                  'تسجيل الخروج',
+                  Icons.logout,
+                  null,
+                  isLogout: true,
+                ),
+              ],
+            ),
           ),
         ),
         body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-                colors: [Colors.teal[50]!, Colors.white],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter),
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
           ),
           child: Padding(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Column(
               children: [
                 if (_showWelcomeMessage)
                   Padding(
-                    padding: EdgeInsets.only(top: 20),
+                    padding: const EdgeInsets.only(top: 20),
                     child: Text(
                       'مرحبًا بك في تطبيق إدارة مرض السكري',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.teal),
+                      style: Theme.of(context).textTheme.headlineMedium,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -520,8 +670,12 @@ class DashboardScreenState extends State<DashboardScreen> {
 }
 
 class DashboardGrid extends StatelessWidget {
-  final Widget Function(BuildContext context,
-      {required String title, required String imagePath, required Widget screen}) buildDashboardButton;
+  final Widget Function(
+    BuildContext context, {
+    required String title,
+    required String imagePath,
+    required Widget screen,
+  }) buildDashboardButton;
 
   const DashboardGrid({super.key, required this.buildDashboardButton});
 

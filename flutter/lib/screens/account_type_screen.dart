@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:diabetes_management/config/theme.dart'; // استيراد الثيم
 
 class AccountTypeScreen extends StatefulWidget {
   const AccountTypeScreen({super.key});
@@ -12,13 +13,7 @@ class AccountTypeScreenState extends State<AccountTypeScreen> {
 
   void _navigateToSignUp() {
     if (_selectedAccountType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('يرجى اختيار نوع الحساب'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      _showSnackBar('يرجى اختيار نوع الحساب', Colors.red);
       return;
     }
 
@@ -29,31 +24,71 @@ class AccountTypeScreenState extends State<AccountTypeScreen> {
     );
   }
 
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('اختر نوع الحساب')),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'اختر نوع الحساب الخاص بك',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'اختر نوع الحساب',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
+          centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.appBarGradient, // استخدام تدرج AppBar من الثيم
             ),
-            SizedBox(height: 20),
-            _buildAccountTypeOption('مريض', 'patient', 'assets/images/patient_logo.png.webp'),
-            SizedBox(height: 10),
-            _buildAccountTypeOption('دكتور', 'doctor', 'assets/images/doctor_logo.png.webp'),
-            SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _navigateToSignUp,
-              child: Text('التالي', style: TextStyle(fontSize: 18)),
+          ),
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient, // استخدام تدرج الخلفية من الثيم
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'اختر نوع الحساب الخاص بك',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 30),
+                _buildAccountTypeOption('مريض', 'patient', 'assets/images/patient_logo.png.webp'),
+                const SizedBox(height: 20),
+                _buildAccountTypeOption('دكتور', 'doctor', 'assets/images/doctor_logo.png.webp'),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: _navigateToSignUp,
+                  child: Text(
+                    'التالي',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -67,25 +102,39 @@ class AccountTypeScreenState extends State<AccountTypeScreen> {
         });
       },
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        padding: EdgeInsets.all(15),
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: _selectedAccountType == value ? Colors.blue.withValues(alpha: 0.2) : Colors.white,
-          border: Border.all(color: _selectedAccountType == value ? Colors.blue : Colors.grey, width: 2),
-          borderRadius: BorderRadius.circular(10),
+          color: _selectedAccountType == value ? Colors.teal.withOpacity(0.1) : Colors.white,
+          border: Border.all(
+            color: _selectedAccountType == value ? Colors.teal : Colors.teal.withOpacity(0.3),
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Image.asset(imagePath, height: 80),
-            SizedBox(height: 10),
+            Image.asset(
+              imagePath,
+              height: 100,
+              width: 100,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 15),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: _selectedAccountType == value ? Colors.blue : Colors.black,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: _selectedAccountType == value ? Colors.teal : Colors.black,
+                  ),
             ),
           ],
         ),

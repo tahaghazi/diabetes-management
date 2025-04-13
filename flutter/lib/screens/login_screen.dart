@@ -17,8 +17,40 @@ class LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _rememberMe = false;
 
   final String _apiUrl = 'http://10.0.2.2:8000/api/login/';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool rememberMe = prefs.getBool('remember_me') ?? false;
+    if (rememberMe) {
+      setState(() {
+        _emailController.text = prefs.getString('saved_email') ?? '';
+        _passwordController.text = prefs.getString('saved_password') ?? '';
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_email', _emailController.text.trim());
+      await prefs.setString('saved_password', _passwordController.text.trim());
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('saved_email');
+      await prefs.remove('saved_password');
+      await prefs.setBool('remember_me', false);
+    }
+  }
 
   bool isValidEmail(String email) {
     return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
@@ -72,10 +104,13 @@ class LoginScreenState extends State<LoginScreen> {
         await prefs.setString('account_type', data['user']['account_type']);
         await prefs.setString('first_name', data['user']['first_name']);
         await prefs.setString('last_name', data['user']['last_name']);
-        await prefs.setString('specialization', data['user']['specialization'] ?? '');
-        await prefs.setString('medical_history', data['user']['medical_history'] ?? '');
+        await prefs.setString(
+            'specialization', data['user']['specialization'] ?? '');
+        await prefs.setString(
+            'medical_history', data['user']['medical_history'] ?? '');
 
         HttpService().setTokens(accessToken, refreshToken);
+        await _saveCredentials();
 
         _showSnackBar('تم تسجيل الدخول بنجاح!', Colors.green);
 
@@ -86,9 +121,12 @@ class LoginScreenState extends State<LoginScreen> {
           );
         }
       } else if (response.statusCode == 401) {
-        _showSnackBar(data['error'] ?? 'كلمة المرور أو البريد الإلكتروني غير صحيحة', Colors.red);
+        _showSnackBar(
+            data['error'] ?? 'كلمة المرور أو البريد الإلكتروني غير صحيحة',
+            Colors.red);
       } else if (response.statusCode == 400) {
-        _showSnackBar(data['error'] ?? 'حدث خطأ أثناء تسجيل الدخول', Colors.red);
+        _showSnackBar(
+            data['error'] ?? 'حدث خطأ أثناء تسجيل الدخول', Colors.red);
       } else if (response.statusCode == 500) {
         _showSnackBar('حدث خطأ في الخادم، حاول لاحقًا', Colors.red);
       } else {
@@ -110,82 +148,162 @@ class LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: TextStyle(color: Colors.white)),
+        content: Text(message),
         backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('تسجيل الدخول')),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: Stack(
           children: [
-            Text(
-              '👋 مرحبًا!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'البريد الإلكتروني',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            SizedBox(height: 10),
-            TextField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              decoration: InputDecoration(
-                labelText: 'كلمة المرور',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                      _obscurePassword ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
+            
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.1,    
+                child: Image.asset(
+                  'assets/images/logo_background.png.webp', 
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-            SizedBox(height: 20),
-            _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      textStyle: TextStyle(fontSize: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '👋 مرحبًا!',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'قم بتسجيل الدخول إلى حسابك',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 20),
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'البريد الإلكتروني',
+                              prefixIcon: const Icon(Icons.email),
+                              filled: true, 
+                              fillColor: Colors.white,   
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8), 
+                                borderSide: const BorderSide(
+                                    color: Colors.black, width: 1), 
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                    color: Colors.black, width: 1), 
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                    color: Colors.black,
+                                    width: 1.5), // خط أسمك لما يكون متفعل
+                              ),
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
+                          const SizedBox(height: 15),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'كلمة المرور',
+                              prefixIcon: const Icon(Icons.lock),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                              filled: true, // تفعيل الخلفية
+                              fillColor: Colors.white, // خلفية بيضاء
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8), // زوايا دائرية خفيفة
+                                borderSide: const BorderSide(
+                                    color: Colors.black, width: 1), // خط أسود رفيع
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                    color: Colors.black, width: 1), // نفس الخط لما يكون مش متفعل
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                    color: Colors.black,
+                                    width: 1.5), // خط أسمك لما يكون متفعل
+                              ),
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('تذكرني',
+                                  style: Theme.of(context).textTheme.bodyMedium),
+                              Checkbox(
+                                value: _rememberMe,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _isLoading
+                              ? const CircularProgressIndicator()
+                              : ElevatedButton(
+                                  onPressed: _login,
+                                  child: const Text('تسجيل الدخول'),
+                                ),
+                          const SizedBox(height: 15),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/forgot_password');
+                            },
+                            child: const Text('هل نسيت كلمة المرور؟'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AccountTypeScreen()),
+                              );
+                            },
+                            child: const Text('ليس لديك حساب؟ إنشاء حساب'),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Text('تسجيل الدخول'),
                   ),
-            TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/forgot_password');
-              },
-              child: Text('هل نسيت كلمة المرور؟'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AccountTypeScreen()),
-                );
-              },
-              child: Text("ليس لديك حساب؟ إنشاء حساب"),
+                ),
+              ),
             ),
           ],
         ),
