@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
+import 'package:diabetes_management/config/theme.dart'; // استيراد الثيم
 
 class RemindersScreen extends StatefulWidget {
   const RemindersScreen({super.key});
@@ -36,6 +37,13 @@ class RemindersScreenState extends State<RemindersScreen> {
     'blood_glucose_test': 'تحليل السكر',
     'medication': 'الدواء',
     'hydration': 'شرب الماء',
+  };
+
+  // خريطة الألوان الجديدة لكل نوع تذكير
+  final Map<String, List<Color>> _reminderTypeColors = {
+    'تحليل السكر': [Colors.purple.shade400, Colors.purple.shade200],
+    'الدواء': [Colors.orange.shade400, Colors.orange.shade200],
+    'شرب الماء': [Colors.blue.shade400, Colors.blue.shade200],
   };
 
   @override
@@ -124,8 +132,6 @@ class RemindersScreenState extends State<RemindersScreen> {
         return;
       }
 
-      // بنجهز الطلب للـ API
-      // medication_name هيتضاف فقط لو المستخدم كتب اسم الدواء ونوع التذكير هو "الدواء"
       var requestBody = {
         'reminder_type': _reminderTypeToApiValue[_selectedReminderType]!,
         'reminder_time': '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}:00',
@@ -133,7 +139,6 @@ class RemindersScreenState extends State<RemindersScreen> {
         if (_medicationName != null && _selectedReminderType == 'الدواء') 'medication_name': _medicationName,
       };
 
-      // بنضيف تذكير مؤقت في القائمة لحد ما الـ API يرد
       var tempReminder = {
         'reminder_type': _selectedReminderType,
         'reminder_time': requestBody['reminder_time'],
@@ -197,7 +202,7 @@ class RemindersScreenState extends State<RemindersScreen> {
     setState(() => _isLoading = false);
   }
 
-  Future<void> _updateReminder(int id, String reminderType, TimeOfDay newTime) async {
+  Future<void> _updateReminder(int id, String reminderType, TimeOfDay newTime, String? medicationName) async {
     setState(() => _isLoading = true);
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -214,6 +219,7 @@ class RemindersScreenState extends State<RemindersScreen> {
       var requestBody = {
         'reminder_type': _reminderTypeToApiValue[reminderType]!,
         'reminder_time': '${newTime.hour.toString().padLeft(2, '0')}:${newTime.minute.toString().padLeft(2, '0')}:00',
+        if (reminderType == 'الدواء') 'medication_name': medicationName,
       };
 
       var response = await HttpService().makeRequest(
@@ -318,7 +324,6 @@ class RemindersScreenState extends State<RemindersScreen> {
 
     final reminderType = _apiValueToReminderType[reminder['reminder_type']] ?? reminder['reminder_type'];
 
-    // بنحدد نص الإشعار بناءً على وجود medication_name
     NotificationService.scheduleDailyNotification(
       id: reminder['id'],
       title: 'تذكير: $reminderType',
@@ -327,7 +332,7 @@ class RemindersScreenState extends State<RemindersScreen> {
           : 'حان وقت $reminderType!',
       scheduledTime: scheduledTime,
       reminderType: _reminderTypeToApiValue[reminderType] ?? reminder['reminder_type'],
-      medicationName: reminder['medication_name'], // ممكن يكون null ومش مشكلة
+      medicationName: reminder['medication_name'],
     );
   }
 
@@ -336,9 +341,12 @@ class RemindersScreenState extends State<RemindersScreen> {
       context: context,
       initialTime: initialTime ?? TimeOfDay.now(),
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+            child: child!,
+          ),
         );
       },
     );
@@ -348,8 +356,17 @@ class RemindersScreenState extends State<RemindersScreen> {
   }
 
   void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
+      SnackBar(
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
   }
 
@@ -363,80 +380,135 @@ class RemindersScreenState extends State<RemindersScreen> {
   void _showEditDialog(Map<String, dynamic> reminder) {
     String? editReminderType = _apiValueToReminderType[reminder['reminder_type']] ?? reminder['reminder_type'];
     TimeOfDay? editTime;
+    String? editMedicationName = reminder['medication_name'];
     final timeParts = reminder['reminder_time'].split(':');
     editTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
+    final TextEditingController medicationController = TextEditingController(text: editMedicationName);
 
     showGeneralDialog(
       context: context,
       pageBuilder: (context, anim1, anim2) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('تعديل التذكير', style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+        title: Text(
+          'تعديل التذكير',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Theme.of(context).primaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'إلغاء',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+            ),
           ),
           TextButton(
             onPressed: () {
               if (editReminderType != null && editTime != null) {
-                _updateReminder(reminder['id'], editReminderType!, editTime!);
+                _updateReminder(reminder['id'], editReminderType!, editTime!, editMedicationName);
                 Navigator.pop(context);
               } else {
                 _showSnackBar('يرجى ملء جميع الحقول', Colors.red);
               }
             },
-            child: const Text('حفظ', style: TextStyle(color: Colors.teal)),
+            child: Text(
+              'حفظ',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).primaryColor),
+            ),
           ),
         ],
         content: StatefulBuilder(
           builder: (context, setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: editReminderType,
-                  decoration: const InputDecoration(
-                    labelText: 'نوع التذكير',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                    filled: true,
-                    fillColor: Color(0xFFF5F5F5),
-                    prefixIcon: Icon(Icons.notifications, color: Colors.teal),
-                  ),
-                  items: _reminderTypes.map((String type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      editReminderType = newValue;
-                    });
-                  },
-                  validator: (value) => value == null ? 'يرجى اختيار نوع التذكير' : null,
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: editReminderType,
+                      decoration: InputDecoration(
+                        labelText: 'نوع التذكير',
+                        labelStyle: Theme.of(context).textTheme.bodyMedium,
+                        prefixIcon: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.black, width: 1),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.black, width: 1),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.black, width: 1.5),
+                        ),
+                      ),
+                      items: _reminderTypes.map((String type) {
+                        return DropdownMenuItem<String>(
+                          value: type,
+                          child: Text(type, style: Theme.of(context).textTheme.bodyMedium),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          editReminderType = newValue;
+                          if (newValue != 'الدواء') {
+                            editMedicationName = null;
+                            medicationController.clear();
+                          }
+                        });
+                      },
+                      validator: (value) => value == null ? 'يرجى اختيار نوع التذكير' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    if (editReminderType == 'الدواء')
+                      TextFormField(
+                        controller: medicationController,
+                        decoration: InputDecoration(
+                          labelText: 'اسم الدواء (اختياري)',
+                          labelStyle: Theme.of(context).textTheme.bodyMedium,
+                          prefixIcon: Icon(Icons.medical_services, color: Theme.of(context).primaryColor),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.black, width: 1),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.black, width: 1.5),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        onChanged: (value) {
+                          editMedicationName = value.isEmpty ? null : value;
+                        },
+                      ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => _selectTime(
+                        context,
+                        initialTime: editTime,
+                        onTimeSelected: (picked) {
+                          setState(() {
+                            editTime = picked;
+                          });
+                        },
+                      ),
+                      child: Text(
+                        editTime == null ? 'اختر الوقت' : 'الوقت: ${_formatTime(editTime!)}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                  onPressed: () => _selectTime(
-                    context,
-                    initialTime: editTime,
-                    onTimeSelected: (picked) {
-                      setState(() {
-                        editTime = picked;
-                      });
-                    },
-                  ),
-                  child: Text(
-                    editTime == null ? 'اختر الوقت' : 'الوقت: ${_formatTime(editTime!)}',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
+              ),
             );
           },
         ),
@@ -459,11 +531,17 @@ class RemindersScreenState extends State<RemindersScreen> {
       context: context,
       pageBuilder: (context, anim1, anim2) => AlertDialog(
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
-        title: const Text('إضافة تذكير جديد', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+        title: Text(
+          'إضافة تذكير جديد',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Theme.of(context).primaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'إلغاء',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -474,81 +552,107 @@ class RemindersScreenState extends State<RemindersScreen> {
                 _showSnackBar('يرجى ملء جميع الحقول', Colors.red);
               }
             },
-            child: const Text('إضافة', style: TextStyle(color: Colors.teal)),
+            child: Text(
+              'إضافة',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).primaryColor),
+            ),
           ),
         ],
         content: StatefulBuilder(
           builder: (context, setState) {
-            return SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: _selectedReminderType,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                        labelText: 'نوع التذكير',
-                        prefixIcon: Icon(Icons.notifications, color: Colors.teal),
-                        filled: true,
-                        fillColor: Color(0xFFF5F5F5),
-                      ),
-                      items: _reminderTypes.map((String type) {
-                        return DropdownMenuItem<String>(
-                          value: type,
-                          child: Text(type),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedReminderType = newValue;
-                          _medicationName = null;
-                          _medicationController.clear();
-                        });
-                      },
-                      validator: (value) => value == null ? 'يرجى اختيار نوع التذكير' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    if (_selectedReminderType == 'الدواء')
-                      TextFormField(
-                        controller: _medicationController,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                          labelText: 'اسم الدواء (اختياري)',
-                          prefixIcon: Icon(Icons.medical_services, color: Colors.teal),
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: _selectedReminderType,
+                        decoration: InputDecoration(
+                          labelText: 'نوع التذكير',
+                          labelStyle: Theme.of(context).textTheme.bodyMedium,
+                          prefixIcon: Icon(Icons.notifications, color: Theme.of(context).primaryColor),
                           filled: true,
-                          fillColor: Color(0xFFF5F5F5),
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.black, width: 1),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.black, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.black, width: 1.5),
+                          ),
                         ),
-                        onChanged: (value) {
+                        items: _reminderTypes.map((String type) {
+                          return DropdownMenuItem<String>(
+                            value: type,
+                            child: Text(type, style: Theme.of(context).textTheme.bodyMedium),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
                           setState(() {
-                            _medicationName = value.isEmpty ? null : value;
+                            _selectedReminderType = newValue;
+                            _medicationName = null;
+                            _medicationController.clear();
                           });
                         },
+                        validator: (value) => value == null ? 'يرجى اختيار نوع التذكير' : null,
                       ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      const SizedBox(height: 16),
+                      if (_selectedReminderType == 'الدواء')
+                        TextFormField(
+                          controller: _medicationController,
+                          decoration: InputDecoration(
+                            labelText: 'اسم الدواء (اختياري)',
+                            labelStyle: Theme.of(context).textTheme.bodyMedium,
+                            prefixIcon: Icon(Icons.medical_services, color: Theme.of(context).primaryColor),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1.5),
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          onChanged: (value) {
+                            setState(() {
+                              _medicationName = value.isEmpty ? null : value;
+                            });
+                          },
+                        ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => _selectTime(
+                          context,
+                          onTimeSelected: (picked) {
+                            setState(() {
+                              _selectedTime = picked;
+                            });
+                          },
+                        ),
+                        child: Text(
+                          _selectedTime == null
+                              ? 'اختر الوقت'
+                              : 'التذكير: ${_formatTime(_selectedTime!)}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                        ),
                       ),
-                      onPressed: () => _selectTime(
-                        context,
-                        onTimeSelected: (picked) {
-                          setState(() {
-                            _selectedTime = picked;
-                          });
-                        },
-                      ),
-                      child: Text(
-                        _selectedTime == null
-                            ? 'اختر الوقت'
-                            : 'التذكير: ${_formatTime(_selectedTime!)}',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -572,58 +676,54 @@ class RemindersScreenState extends State<RemindersScreen> {
     final timeParts = reminder['reminder_time'].split(':');
     final time = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
 
-    Color cardColor;
-    Color gradientStart;
     IconData iconData;
     switch (reminder['reminder_type']) {
       case 'تحليل السكر':
-        cardColor = Colors.redAccent;
-        gradientStart = Colors.red[300]!;
         iconData = Icons.bloodtype;
         break;
       case 'الدواء':
-        cardColor = Colors.orangeAccent;
-        gradientStart = Colors.orange[300]!;
         iconData = Icons.medical_services;
         break;
       case 'شرب الماء':
-        cardColor = Colors.blueAccent;
-        gradientStart = Colors.blue[300]!;
         iconData = Icons.local_drink;
         break;
       default:
-        cardColor = Colors.grey;
-        gradientStart = Colors.grey[300]!;
         iconData = Icons.notifications;
     }
 
+    final gradientColors = _reminderTypeColors[reminder['reminder_type']] ??
+        [Colors.grey.shade400, Colors.grey.shade200];
+
     return Card(
-      elevation: 6,
+      elevation: 4,
       margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [gradientStart, cardColor],
+            colors: gradientColors,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: ListTile(
           leading: CircleAvatar(
             backgroundColor: Colors.white,
-            child: Icon(iconData, color: cardColor),
+            child: Icon(iconData, color: gradientColors[0]),
           ),
           title: Text(
             reminder['reminder_type'],
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
           ),
           subtitle: Text(
             reminder['reminder_type'] == 'الدواء' && reminder['medication_name'] != null
                 ? '${_formatTime(time)} - ${reminder['medication_name']}'
                 : _formatTime(time),
-            style: const TextStyle(fontSize: 16, color: Colors.white70),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -662,92 +762,95 @@ class RemindersScreenState extends State<RemindersScreen> {
   Widget build(BuildContext context) {
     final groupedReminders = _groupRemindersByType();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('التذكيرات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.tealAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'التذكيرات',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
+          centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.appBarGradient,
             ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.dashboard),
+              onPressed: () => Navigator.pushNamed(context, '/dashboard'),
+            ),
+          ],
         ),
-        elevation: 4,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.dashboard),
-            onPressed: () => Navigator.pushNamed(context, '/dashboard'),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient,
           ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFE0F7FA), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Colors.teal))
-            : _reminders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.notifications_off, size: 80, color: Colors.teal[200]),
-                        const SizedBox(height: 16),
-                        Text(
-                          'لا توجد تذكيرات حاليًا',
-                          style: TextStyle(fontSize: 20, color: Colors.teal[400]),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: groupedReminders.entries.map((entry) {
-                      final reminderType = entry.key;
-                      final reminders = entry.value;
-
-                      if (reminders.isEmpty) return const SizedBox.shrink();
-
-                      return ExpansionTile(
-                        leading: Icon(
-                          reminderType == 'تحليل السكر'
-                              ? Icons.bloodtype
-                              : reminderType == 'الدواء'
-                                  ? Icons.medical_services
-                                  : Icons.local_drink,
-                          color: Colors.teal,
-                        ),
-                        title: Text(
-                          reminderType,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal,
-                          ),
-                        ),
-                        children: reminders.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final reminder = entry.value;
-                          return _buildReminderItem(reminder, index);
-                        }).toList(),
-                        initiallyExpanded: true,
-                      );
-                    }).toList(),
+          child: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
                   ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddReminderDialog,
-        backgroundColor: Colors.teal,
-        child: const Icon(Icons.add, color: Colors.white),
-        tooltip: 'إضافة تذكير',
-        elevation: 6,
+                )
+              : _reminders.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_off,
+                            size: 80,
+                            color: Theme.of(context).primaryColor.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'لا توجد تذكيرات حاليًا',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  color: Theme.of(context).primaryColor.withOpacity(0.7),
+                                ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: groupedReminders.entries.map((entry) {
+                        final reminderType = entry.key;
+                        final reminders = entry.value;
+
+                        if (reminders.isEmpty) return const SizedBox.shrink();
+
+                        return ExpansionTile(
+                          leading: Icon(
+                            reminderType == 'تحليل السكر'
+                                ? Icons.bloodtype
+                                : reminderType == 'الدواء'
+                                    ? Icons.medical_services
+                                    : Icons.local_drink,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          title: Text(
+                            reminderType,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                          ),
+                          children: reminders.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final reminder = entry.value;
+                            return _buildReminderItem(reminder, index);
+                          }).toList(),
+                          initiallyExpanded: true,
+                        );
+                      }).toList(),
+                    ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showAddReminderDialog,
+          tooltip: 'إضافة تذكير',
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:diabetes_management/services/http_service.dart';
+import 'package:diabetes_management/config/theme.dart'; // استيراد الثيم
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -126,139 +127,183 @@ class EditProfileScreenState extends State<EditProfileScreen> {
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
+      SnackBar(
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('تعديل الملف الشخصي'),
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم الأول',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'يرجى إدخال الاسم الأول';
-                    }
-                    if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
-                      return 'الاسم الأول يجب أن يحتوي على حروف ومسافات فقط';
-                    }
-                    if (value.trim().isEmpty) {
-                      return 'الاسم الأول لا يمكن أن يكون مسافات فقط';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم الأخير',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'يرجى إدخال الاسم الأخير';
-                    }
-                    if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
-                      return 'الاسم الأخير يجب أن يحتوي على حروف ومسافات فقط';
-                    }
-                    if (value.trim().isEmpty) {
-                      return 'الاسم الأخير لا يمكن أن يكون مسافات فقط';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (_accountType == 'doctor')
-                  TextFormField(
-                    controller: _specializationController,
-                    decoration: const InputDecoration(
-                      labelText: 'التخصص',
-                      border: OutlineInputBorder(),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'تعديل الملف الشخصي',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
+          centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.appBarGradient, // استخدام تدرج AppBar من الثيم
+            ),
+          ),
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient, // استخدام تدرج الخلفية من الثيم
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 40, right: 16, left: 16, bottom: 16),
+            child: Form(
+              key: _formKey,
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height, // تحديد الارتفاع بناءً على حجم الشاشة
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - kToolbarHeight,
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'يرجى إدخال التخصص';
-                      }
-                      if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
-                        return 'التخصص يجب أن يحتوي على حروف ومسافات فقط';
-                      }
-                      if (value.trim().length < 3) {
-                        return 'التخصص يجب أن يكون 3 حروف على الأقل';
-                      }
-                      if (value.trim().isEmpty) {
-                        return 'التخصص لا يمكن أن يكون مسافات فقط';
-                      }
-                      return null;
-                    },
-                  ),
-                if (_accountType == 'patient')
-                  TextFormField(
-                    controller: _medicalHistoryController,
-                    decoration: const InputDecoration(
-                      labelText: 'السجل الصحي',
-                      border: OutlineInputBorder(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _firstNameController,
+                          decoration: InputDecoration(
+                            labelText: 'الاسم الأول',
+                            labelStyle: Theme.of(context).textTheme.bodyMedium,
+                            border: const OutlineInputBorder(),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'يرجى إدخال الاسم الأول';
+                            }
+                            if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
+                              return 'الاسم الأول يجب أن يحتوي على حروف ومسافات فقط';
+                            }
+                            if (value.trim().isEmpty) {
+                              return 'الاسم الأول لا يمكن أن يكون مسافات فقط';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _lastNameController,
+                          decoration: InputDecoration(
+                            labelText: 'الاسم الأخير',
+                            labelStyle: Theme.of(context).textTheme.bodyMedium,
+                            border: const OutlineInputBorder(),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'يرجى إدخال الاسم الأخير';
+                            }
+                            if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
+                              return 'الاسم الأخير يجب أن يحتوي على حروف ومسافات فقط';
+                            }
+                            if (value.trim().isEmpty) {
+                              return 'الاسم الأخير لا يمكن أن يكون مسافات فقط';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        if (_accountType == 'doctor')
+                          TextFormField(
+                            controller: _specializationController,
+                            decoration: InputDecoration(
+                              labelText: 'التخصص',
+                              labelStyle: Theme.of(context).textTheme.bodyMedium,
+                              border: const OutlineInputBorder(),
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'يرجى إدخال التخصص';
+                              }
+                              if (!RegExp(r'^[\p{L}\s]+$', unicode: true).hasMatch(value)) {
+                                return 'التخصص يجب أن يحتوي على حروف ومسافات فقط';
+                              }
+                              if (value.trim().length < 3) {
+                                return 'التخصص يجب أن يكون 3 حروف على الأقل';
+                              }
+                              if (value.trim().isEmpty) {
+                                return 'التخصص لا يمكن أن يكون مسافات فقط';
+                              }
+                              return null;
+                            },
+                          ),
+                        if (_accountType == 'patient')
+                          TextFormField(
+                            controller: _medicalHistoryController,
+                            decoration: InputDecoration(
+                              labelText: 'السجل الصحي',
+                              labelStyle: Theme.of(context).textTheme.bodyMedium,
+                              border: const OutlineInputBorder(),
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (!RegExp(r'^[\p{L}\s\d\u0660-\u0669\-\/.,]*$', unicode: true).hasMatch(value)) {
+                                  return 'السجل الصحي يجب أن يحتوي على حروف وأرقام فقط';
+                                }
+                                if (value.trim().isEmpty) {
+                                  return 'السجل الصحي لا يمكن أن يكون مسافات فقط';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        const SizedBox(height: 24),
+                        _isLoading
+                            ? Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: _updateProfile,
+                                    child: Text(
+                                      'حفظ التعديلات',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: _cancel,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey[400],
+                                    ),
+                                    child: Text(
+                                      'إلغاء',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ],
                     ),
-                    validator: (value) {
-                      if (value != null && value.isNotEmpty) {
-                       if (!RegExp(r'^[\p{L}\s\d\u0660-\u0669\-\/.,]*$', unicode: true).hasMatch(value)) {
-                        return 'السجل الصحي يجب أن يحتوي على حروف، أرقام فقط';
-                      }
-                        if (value.trim().isEmpty) {
-                          return 'السجل الصحي لا يمكن أن يكون مسافات فقط';
-                        }
-                      }
-                      return null;
-                    },
                   ),
-                const SizedBox(height: 20),
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton(
-                            onPressed: _updateProfile,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            ),
-                            child: const Text(
-                              'حفظ التعديلات',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: _cancel,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            ),
-                            child: const Text(
-                              'إلغاء',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-              ],
+                ),
+              ),
             ),
           ),
         ),

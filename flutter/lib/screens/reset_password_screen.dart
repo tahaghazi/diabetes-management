@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'dart:convert';
+import 'package:diabetes_management/config/theme.dart'; // استيراد الثيم
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -57,9 +58,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (response == null) {
         debugPrint('Response is null');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('فشل الاتصال بالخادم. تأكد من أن الخادم يعمل.')),
-          );
+          _showSnackBar('فشل الاتصال بالخادم. تأكد من أن الخادم يعمل.', Colors.red);
         }
         return;
       }
@@ -69,10 +68,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       if (response.statusCode == 200) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('تم إعادة تعيين كلمة المرور بنجاح')),
-          );
-          await Future.delayed(Duration(seconds: 1));
+          _showSnackBar('تم إعادة تعيين كلمة المرور بنجاح', Colors.green);
+          await Future.delayed(const Duration(seconds: 1));
           if (mounted) {
             Navigator.of(context).pop();
             Navigator.of(context).pop();
@@ -83,21 +80,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         String errorMessage;
         if (responseBody['error'] == 'Invalid OTP') {
           errorMessage = 'الكود غير صحيح .. من فضلك ادخل الكود الصحيح';
+        } else if (responseBody['error'] == 'New password cannot be the same as the old password') {
+          errorMessage = 'كلمة المرور الجديدة لا يمكن أن تكون نفس كلمة المرور القديمة';
         } else {
           errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إعادة التعيين (كود الحالة: ${response.statusCode})';
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMessage)),
-          );
+          _showSnackBar(errorMessage, Colors.red);
         }
       }
     } catch (e) {
       debugPrint('Error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ: ${e.toString()}')),
-        );
+        _showSnackBar('حدث خطأ: ${e.toString()}', Colors.red);
       }
     } finally {
       if (mounted) {
@@ -108,121 +103,221 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
   }
 
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("إعادة تعيين كلمة المرور"),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'إعادة تعيين كلمة المرور',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
+          centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.appBarGradient, // استخدام تدرج AppBar من الثيم
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          ),
         ),
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: 20),
-                Text(
-                  "أدخل الكود المكون من 6 أرقام الذي تلقيته عبر البريد الإلكتروني",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _codeController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  decoration: InputDecoration(
-                    labelText: "الكود",
-                    border: OutlineInputBorder(),
-                    counterText: "",
-                    prefixIcon: Icon(Icons.code),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.backgroundGradient, // استخدام تدرج الخلفية من الثيم
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "يرجى إدخال الكود";
-                    }
-                    if (value.length != 6) {
-                      return "يجب أن يكون الكود مكونًا من 6 أرقام";
-                    }
-                    if (!RegExp(r'^[\d\u0660-\u0669]{6}$').hasMatch(value)) {
-                      return "يجب أن يحتوي الكود على أرقام فقط ";
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                TextFormField(
-                  controller: _newPasswordController,
-                  obscureText: _isObscure1,
-                  decoration: InputDecoration(
-                    labelText: "كلمة المرور الجديدة",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(_isObscure1 ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () {
-                        setState(() {
-                          _isObscure1 = !_isObscure1;
-                        });
-                      },
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Text(
+                          'إعادة تعيين كلمة المرور',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'أدخل الكود المكون من 6 أرقام الذي تلقيته عبر البريد الإلكتروني',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _codeController,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          decoration: InputDecoration(
+                            labelText: 'الكود',
+                            counterText: '',
+                            prefixIcon: const Icon(Icons.code),
+                            labelStyle: Theme.of(context).textTheme.bodyMedium,
+                            filled: true, // تفعيل الخلفية
+                            fillColor: Colors.white, // خلفية بيضاء
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8), // زوايا دائرية خفيفة
+                              borderSide: const BorderSide(color: Colors.black, width: 1), // خط أسود رفيع
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1), // نفس الخط لما يكون مش متفعل
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1.5), // خط أسمك لما يكون متفعل
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textDirection: TextDirection.rtl,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'يرجى إدخال الكود';
+                            }
+                            if (value.length != 6) {
+                              return 'يجب أن يكون الكود مكونًا من 6 أرقام';
+                            }
+                            if (!RegExp(r'^[\d\u0660-\u0669]{6}$').hasMatch(value)) {
+                              return 'يجب أن يحتوي الكود على أرقام فقط';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 15),
+                        TextFormField(
+                          controller: _newPasswordController,
+                          obscureText: _isObscure1,
+                          decoration: InputDecoration(
+                            labelText: 'كلمة المرور الجديدة',
+                            prefixIcon: const Icon(Icons.lock),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isObscure1 ? Icons.visibility_off : Icons.visibility,
+                                color: Colors.teal,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isObscure1 = !_isObscure1;
+                                });
+                              },
+                            ),
+                            labelStyle: Theme.of(context).textTheme.bodyMedium,
+                            filled: true, // تفعيل الخلفية
+                            fillColor: Colors.white, // خلفية بيضاء
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8), // زوايا دائرية خفيفة
+                              borderSide: const BorderSide(color: Colors.black, width: 1), // خط أسود رفيع
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1), // نفس الخط لما يكون مش متفعل
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1.5), // خط أسمك لما يكون متفعل
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textDirection: TextDirection.rtl,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'يرجى إدخال كلمة المرور الجديدة';
+                            }
+                            if (value.length < 6) {
+                              return 'يجب أن تكون كلمة المرور على الأقل 6 أحرف';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 15),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: _isObscure2,
+                          decoration: InputDecoration(
+                            labelText: 'تأكيد كلمة المرور',
+                            prefixIcon: const Icon(Icons.lock),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isObscure2 ? Icons.visibility_off : Icons.visibility,
+                                color: Colors.teal,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isObscure2 = !_isObscure2;
+                                });
+                              },
+                            ),
+                            labelStyle: Theme.of(context).textTheme.bodyMedium,
+                            filled: true, // تفعيل الخلفية
+                            fillColor: Colors.white, // خلفية بيضاء
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8), // زوايا دائرية خفيفة
+                              borderSide: const BorderSide(color: Colors.black, width: 1), // خط أسود رفيع
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1), // نفس الخط لما يكون مش متفعل
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1.5), // خط أسمك لما يكون متفعل
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textDirection: TextDirection.rtl,
+                          validator: (value) {
+                            if (value != _newPasswordController.text) {
+                              return 'كلمة المرور لا تطابق التأكيد';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        _isLoading
+                            ? Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                                ),
+                              )
+                            : ElevatedButton(
+                                onPressed: _resetPassword,
+                                child: Text(
+                                  'إعادة تعيين كلمة المرور',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ),
+                      ],
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "يرجى إدخال كلمة المرور الجديدة";
-                    }
-                    if (value.length < 6) {
-                      return "يجب أن تكون كلمة المرور على الأقل 6 أحرف";
-                    }
-                    return null;
-                  },
                 ),
-                SizedBox(height: 10),
-                Text(
-                  "يرجى اختيار كلمة مرور جديدة مختلفة عن كلمة المرور السابقة لضمان الأمان",
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 10),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _isObscure2,
-                  decoration: InputDecoration(
-                    labelText: "تأكيد كلمة المرور",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(_isObscure2 ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () {
-                        setState(() {
-                          _isObscure2 = !_isObscure2;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value != _newPasswordController.text) {
-                      return "كلمة المرور لا تطابق التأكيد";
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _resetPassword,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
-                  ),
-                  child: _isLoading
-                      ? CircularProgressIndicator()
-                      : Text("إعادة تعيين كلمة المرور"),
-                ),
-              ],
+              ),
             ),
           ),
         ),
