@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import PatientProfile, DoctorProfile
+from django.contrib.auth.models import User
+from .models import PatientProfile, DoctorProfile, DoctorPatientRelation
 
 class PatientProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,3 +36,19 @@ class DoctorProfileUpdateSerializer(serializers.ModelSerializer):
         if not value.isalpha():
             raise serializers.ValidationError("Last name should only contain letters.")
         return value
+
+class DoctorSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='doctorprofile.first_name')
+    last_name = serializers.CharField(source='doctorprofile.last_name')
+    specialization = serializers.CharField(source='doctorprofile.specialization')
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'specialization']
+
+class DoctorPatientRelationSerializer(serializers.ModelSerializer):
+    doctor = DoctorSerializer()
+
+    class Meta:
+        model = DoctorPatientRelation
+        fields = ['id', 'doctor']
