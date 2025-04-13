@@ -6,7 +6,8 @@ from django.contrib.auth.models import User
 from .serializers import (
     PatientProfileUpdateSerializer, 
     DoctorProfileUpdateSerializer,
-    DoctorSerializer
+    DoctorSerializer,
+    PatientProfileSerializer
 )
 from .models import DoctorPatientRelation
 
@@ -52,12 +53,15 @@ def search_doctors(request):
         return Response({"error": "Only patients can search for doctors"}, status=status.HTTP_403_FORBIDDEN)
 
     query = request.GET.get('query', '')
+    if not query:
+        return Response([])
+
     doctors = User.objects.filter(
         doctorprofile__isnull=False, 
-        first_name__icontains=query
+        doctorprofile__first_name__icontains=query  
     ) | User.objects.filter(
         doctorprofile__isnull=False,
-        last_name__icontains=query
+        doctorprofile__last_name__icontains=query  
     ) | User.objects.filter(
         doctorprofile__isnull=False,
         doctorprofile__specialization__icontains=query
@@ -87,3 +91,54 @@ def link_patient_to_doctor(request):
         return Response({"message": "Successfully linked to the doctor"}, status=status.HTTP_201_CREATED)
     except User.DoesNotExist:
         return Response({"error": "Doctor not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unlink_from_doctor(request):
+    user = request.user
+    if not hasattr(user, 'patientprofile'):
+        return Response({"error": "Only patients can unlink from a doctor"}, status=status.HTTP_403_FORBIDDEN)
+
+    doctor_id = request.data.get('doctor_id')
+    if not doctor_id:
+        return Response({"error": "Doctor ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        doctor = User.objects.get(id=doctor_id, doctorprofile__isnull=False)
+        relation = DoctorPatientRelation.objects.filter(doctor=doctor, patient=user).first()
+        if not relation:
+            return Response({"error": "You are not linked to this doctor"}, status=status.HTTP_400_BAD_REQUEST)
+
+        relation.delete()
+        return Response({"message": "Successfully unlinked from the doctor"}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "Doctor not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_patients(request):
+    user = request.user
+    if not hasattr(user, 'doctorprofile'):
+        return Response({"error": "Only doctors can view their patients"}, status=status.HTTP_403_FORBIDDEN)
+
+    relations = DoctorPatientRelation.objects.filter(doctor=user)
+    patients = [relation.patient for relation in relations]
+    serializer = PatientProfileSerializer(patients, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_patient_health_record(request, patient_id):
+    user = request.user
+    if not hasattr(user, 'doctorprofile'):
+        return Response({"error": "Only doctors can view patient health records"}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        patient = User.objects.get(id=patient_id, patientprofile__isnull=False)
+        if not DoctorPatientRelation.objects.filter(doctor=user, patient=patient).exists():
+            return Response({"error": "This patient is not linked to you"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PatientProfileSerializer(patient)
+        return Response(serializer.data)
+    except User.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=status.HTTP_404_NOT_FOUND)
