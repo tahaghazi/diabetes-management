@@ -74,6 +74,7 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'GET',
         url: Uri.parse('http://10.0.2.2:8000/api/get-reminders/'),
+        //url: Uri.parse('http://127.0.0.1:8000/api/get-reminders/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -154,6 +155,7 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'POST',
         url: Uri.parse('http://10.0.2.2:8000/api/create-reminder/'),
+        //url: Uri.parse('http://127.0.0.1:8000/api/create-reminder/'),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
@@ -225,6 +227,7 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'PUT',
         url: Uri.parse('http://10.0.2.2:8000/api/update-reminder/$id/'),
+        //url: Uri.parse('http://127.0.0.1:8000/api/update-reminder/$id/'),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
@@ -280,6 +283,7 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'DELETE',
         url: Uri.parse('http://10.0.2.2:8000/api/delete-reminder/$id/'),
+        //url: Uri.parse('http://127.0.0.1:8000/api/delete-reminder/$id/'),
         headers: {'Content-Type': 'application/json'},
       );
 
