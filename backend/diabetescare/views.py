@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .serializers import GlucoseTrackingSerializer
 from profiles.models import PatientProfile
+from .models import GlucoseTracking 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -19,14 +20,17 @@ def add_glucose_reading(request):
     if serializer.is_valid():
         glucose_reading = serializer.save(patient=patient)
 
-        medical_history_entry = (
-            f"{glucose_reading.get_glucose_type_display()}: {glucose_reading.glucose_value} mg/dL "
-            f"on {glucose_reading.timestamp.strftime('%Y-%m-%d %H:%M')}"
-        )
-        if patient.medical_history:
-            patient.medical_history += f"\n{medical_history_entry}"
-        else:
-            patient.medical_history = medical_history_entry
+        all_readings = GlucoseTracking.objects.filter(patient=patient).order_by('timestamp')
+
+        medical_history_entry = "Glucose Readings:\n"
+        for reading in all_readings:
+            reading_entry = (
+                f"- {reading.get_glucose_type_display()}: {reading.glucose_value} mg/dL "
+                f"on {reading.timestamp.strftime('%Y-%m-%d %H:%M')}"
+            )
+            medical_history_entry += f"{reading_entry}\n"
+
+        patient.medical_history = medical_history_entry.strip()
         patient.save()
 
         return Response({
