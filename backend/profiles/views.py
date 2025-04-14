@@ -82,6 +82,12 @@ def link_patient_to_doctor(request):
         return Response({"error": "Doctor ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        if DoctorPatientRelation.objects.filter(patient=user).exists():
+            return Response(
+                {"error": "You are already linked to a doctor. Please unlink first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         doctor = User.objects.get(id=doctor_id, doctorprofile__isnull=False)
         if DoctorPatientRelation.objects.filter(doctor=doctor, patient=user).exists():
             return Response({"error": "You are already linked to this doctor"}, status=status.HTTP_400_BAD_REQUEST)
@@ -113,6 +119,41 @@ def unlink_from_doctor(request):
         return Response({"message": "Successfully unlinked from the doctor"}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "Doctor not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_doctor(request):
+    user = request.user
+
+    try:
+        if not user.patientprofile:
+            return Response(
+                {"error": "Only patients can view their doctors"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    except AttributeError:
+        return Response(
+            {"error": "Only patients can view their doctors"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        relation = DoctorPatientRelation.objects.filter(patient=user).first()
+        if not relation:
+            return Response(
+                {"message": "You are not linked to any doctor"},
+                status=status.HTTP_200_OK
+            )
+
+        doctor = relation.doctor
+        serializer = DoctorSerializer(doctor)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": f"An unexpected error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
