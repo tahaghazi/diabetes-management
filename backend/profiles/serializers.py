@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import PatientProfile, DoctorProfile, DoctorPatientRelation
+from .models import PatientProfile, DoctorProfile
 
 class PatientProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,13 +45,6 @@ class DoctorSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'specialization']
-
-class DoctorPatientRelationSerializer(serializers.ModelSerializer):
-    doctor = DoctorSerializer()
-
-    class Meta:
-        model = DoctorPatientRelation
-        fields = ['id', 'doctor']
 
 class PatientProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='patientprofile.first_name')

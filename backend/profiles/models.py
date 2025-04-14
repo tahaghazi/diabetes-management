@@ -23,7 +23,7 @@ class DoctorProfile(models.Model):
     
 class DoctorPatientRelation(models.Model):
     doctor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='patients')
-    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='doctors')
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='doctors', unique=True)  
 
     def clean(self):
         if not hasattr(self.doctor, 'doctorprofile'):
@@ -36,7 +36,6 @@ class DoctorPatientRelation(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        unique_together = ('doctor', 'patient')
         constraints = [
             CheckConstraint(
                 check=~Q(doctor=F('patient')),
