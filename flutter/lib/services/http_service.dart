@@ -44,6 +44,7 @@ class HttpService {
     try {
       var response = await _client.post(
         Uri.parse('http://10.0.2.2:8000/api/token/refresh/'),
+        //Uri.parse('http://127.0.0.1:8000/api/token/refresh/'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -94,11 +95,18 @@ class HttpService {
     String? bodyString;
     if (body != null) {
       if (headers['Content-Type']?.contains('application/json') == true) {
-        bodyString = jsonEncode(body);
+        if (body is String) {
+          bodyString = body;
+        } else {
+          bodyString = jsonEncode(body);
+        }
       } else {
         bodyString = body.toString();
       }
     }
+
+    debugPrint('Request Headers: $headers');
+    debugPrint('Request Body: $bodyString');
 
     http.Response response;
     if (method.toUpperCase() == 'GET') {
@@ -113,6 +121,9 @@ class HttpService {
       throw Exception('Unsupported HTTP method');
     }
 
+    debugPrint('Response Status: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+
     if (response.statusCode == 401) {
       debugPrint("Access token expired, attempting to refresh...");
       bool refreshed = await refreshAccessToken();
@@ -120,11 +131,17 @@ class HttpService {
         headers['Authorization'] = 'Bearer $_accessToken';
         if (body != null) {
           if (headers['Content-Type']?.contains('application/json') == true) {
-            bodyString = jsonEncode(body);
+            if (body is String) {
+              bodyString = body;
+            } else {
+              bodyString = jsonEncode(body);
+            }
           } else {
             bodyString = body.toString();
           }
         }
+        debugPrint('Retrying Request Headers: $headers');
+        debugPrint('Retrying Request Body: $bodyString');
         if (method.toUpperCase() == 'GET') {
           response = await _client.get(url, headers: headers);
         } else if (method.toUpperCase() == 'POST') {
@@ -136,6 +153,8 @@ class HttpService {
         } else {
           throw Exception('Unsupported HTTP method');
         }
+        debugPrint('Retry Response Status: ${response.statusCode}');
+        debugPrint('Retry Response Body: ${response.body}');
       } else {
         return null;
       }

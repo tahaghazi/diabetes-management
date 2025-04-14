@@ -376,6 +376,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       final response = await HttpService().makeRequest(
         method: 'POST',
         url: Uri.parse('http://10.0.2.2:8000/api/logout/'),
+        //url: Uri.parse('http://127.0.0.1:8000/api/logout/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -441,6 +442,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     final response = await HttpService().makeRequest(
       method: 'GET',
       url: Uri.parse('http://10.0.2.2:8000/api/search-doctors/?query=$query'),
+      //url: Uri.parse('http://127.0.0.1:8000/api/search-doctors/?query=$query'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -889,12 +891,57 @@ class DashboardScreenState extends State<DashboardScreen> {
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               trailing: ElevatedButton(
-                                onPressed: () {
-                                  // عرض رسالة تأكيد عند النقر على زر طلب الاستشارة
-                                  _showSnackBar(
-                                    'تم طلب استشارة مع الدكتور ${doctor['first_name']} ${doctor['last_name']}',
-                                    Colors.green,
-                                  );
+                                onPressed: () async {
+                                  try {
+                                    final response = await HttpService().makeRequest(
+                                      method: 'POST',
+                                      url: Uri.parse('http://10.0.2.2:8000/api/link-to-doctor/'),
+                                      //url: Uri.parse('http://127.0.0.1:8000/api/link-to-doctor/'),
+                                      headers: {'Content-Type': 'application/json'},
+                                      body: jsonEncode({'doctor_id': doctor['id']}),
+                                    );
+
+                                    if (response == null) {
+                                      _showSnackBar(
+                                        'فشل الاتصال بالسيرفر',
+                                        Colors.red,
+                                      );
+                                      return;
+                                    }
+
+                                    debugPrint('Link Doctor Response Status: ${response.statusCode}');
+                                    debugPrint('Link Doctor Response Body: ${response.body}');
+
+                                    if (response.statusCode == 201) {
+                                      _showSnackBar(
+                                        'تم طلب استشارة مع الدكتور ${doctor['first_name']} ${doctor['last_name']}',
+                                        Colors.green,
+                                      );
+                                    } else {
+                                      String errorMessage = 'خطأ غير معروف';
+                                      // التأكد إن الـ response هو JSON قبل ما نعمل decode
+                                      if (response.headers['content-type']?.contains('application/json') == true) {
+                                        try {
+                                          final responseData = jsonDecode(response.body);
+                                          errorMessage = responseData['error'] ?? 'خطأ غير معروف';
+                                        } catch (e) {
+                                          errorMessage = 'فشل تحليل الاستجابة: ${response.body}';
+                                        }
+                                      } else {
+                                        errorMessage = 'استجابة غير متوقعة من السيرفر: ${response.body}';
+                                      }
+                                      _showSnackBar(
+                                        'فشل طلب الاستشارة: $errorMessage',
+                                        Colors.red,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    debugPrint('Link Doctor Error: $e');
+                                    _showSnackBar(
+                                      'حدث خطأ: $e',
+                                      Colors.red,
+                                    );
+                                  }
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.teal,
