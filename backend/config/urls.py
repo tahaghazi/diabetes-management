@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/', include('authentication.urls')),
     path('api/', include('profiles.urls')),
     path('api/', include('reminders.urls')),
+    path('api/', include('diabetescare.urls')),
 ]

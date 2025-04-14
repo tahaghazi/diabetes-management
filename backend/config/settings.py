@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'authentication',
     'profiles',
     'reminders',
+    'diabetescare',
 ]
 
 
