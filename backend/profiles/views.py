@@ -116,6 +116,37 @@ def unlink_from_doctor(request):
     
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def get_my_doctor(request):
+
+    user = request.user
+
+    try:
+        if not user.patientprofile:
+            return Response(
+                {"error": "Only patients can view their doctors"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    except AttributeError:
+        return Response(
+            {"error": "Only patients can view their doctors"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        relations = DoctorPatientRelation.objects.filter(patient=user)
+        doctors = [relation.doctor for relation in relations]
+
+        serializer = DoctorSerializer(doctors, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": f"An unexpected error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_my_patients(request):
     user = request.user
     if not hasattr(user, 'doctorprofile'):
