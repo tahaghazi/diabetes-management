@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
@@ -11,6 +12,38 @@ import 'profile_screen.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
 import 'package:diabetes_management/config/theme.dart';
+
+// شاشة متابعة المرضى (للدكتور فقط)
+class PatientMonitoringScreen extends StatelessWidget {
+  const PatientMonitoringScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('متابعة المرضى'),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.appBarGradient,
+          ),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ),
+        child: const Center(
+          child: Text(
+            'هنا سيتم عرض بيانات المرضى للمتابعة',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,12 +62,19 @@ class DashboardScreenState extends State<DashboardScreen> {
   int _notificationCount = 0;
   Timer? _notificationTimer;
   List<Map<String, dynamic>> _lastNotifications = [];
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+  String? _searchError;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _startNotificationPolling();
+    _searchController.addListener(() {
+      setState(() {}); // لتحديث واجهة المستخدم عند تغيير النص (لإظهار/إخفاء زر المسح)
+    });
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
@@ -47,6 +87,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _notificationTimer?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -395,6 +436,115 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // وظيفة لإرسال طلب بحث إلى API
+  Future<List<Map<String, dynamic>>> _fetchDoctors(String query) async {
+    final response = await HttpService().makeRequest(
+      method: 'GET',
+      url: Uri.parse('http://10.0.2.2:8000/api/search-doctors/?query=$query'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response == null) {
+      throw Exception('فشل الاتصال بالسيرفر');
+    }
+
+    debugPrint('Search API Response Status: ${response.statusCode}');
+    debugPrint('Search API Response Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(utf8.decode(response.bodyBytes));
+      debugPrint('Parsed Response Data: $responseData');
+
+      if (responseData is List) {
+        return List<Map<String, dynamic>>.from(responseData);
+      } else if (responseData is Map) {
+        var doctorsData = responseData['doctors'];
+        if (doctorsData is List) {
+          return List<Map<String, dynamic>>.from(doctorsData);
+        } else if (doctorsData is Map) {
+          return doctorsData.values.map((value) => Map<String, dynamic>.from(value)).toList();
+        }
+      }
+    }
+    return [];
+  }
+
+  // وظيفة البحث عن الأطباء
+  Future<void> _searchDoctors(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _searchError = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+    });
+
+    try {
+      // تقسيم الاستعلام إذا كان يحتوي على فراغ
+      final queryParts = query.trim().split(' ');
+
+      if (queryParts.length >= 2) {
+        final firstNameQuery = queryParts[0];
+        final lastNameQuery = queryParts[1];
+
+        // إرسال طلب للبحث بـ first_name
+        final firstNameResults = await _fetchDoctors(firstNameQuery);
+        // إرسال طلب للبحث بـ last_name
+        final lastNameResults = await _fetchDoctors(lastNameQuery);
+
+        // دمج النتائج: نأخذ الأطباء الذين يتطابقون مع كلا الشرطين
+        _searchResults = [];
+
+        // نستخدم قائمة فريدة بناءً على معرف الطبيب (id) لتجنب التكرار
+        final Map<String, Map<String, dynamic>> uniqueDoctors = {};
+
+        // نتحقق من النتائج الأولى (first_name)
+        for (var doctor in firstNameResults) {
+          final firstName = (doctor['first_name'] ?? '').toString().toLowerCase();
+          if (firstName.contains(firstNameQuery.toLowerCase())) {
+            final doctorId = doctor['id'].toString();
+            uniqueDoctors[doctorId] = doctor;
+          }
+        }
+
+        // نتحقق من النتائج الثانية (last_name)
+        for (var doctor in lastNameResults) {
+          final lastName = (doctor['last_name'] ?? '').toString().toLowerCase();
+          final doctorId = doctor['id'].toString();
+          if (lastName.contains(lastNameQuery.toLowerCase()) && uniqueDoctors.containsKey(doctorId)) {
+            _searchResults.add(uniqueDoctors[doctorId]!);
+          }
+        }
+
+        if (_searchResults.isEmpty) {
+          _searchError = 'لا توجد نتائج مطابقة';
+        }
+      } else {
+        _searchResults = await _fetchDoctors(query);
+        if (_searchResults.isEmpty) {
+          _searchError = 'لا توجد نتائج مطابقة';
+        }
+      }
+
+      setState(() {});
+    } catch (e) {
+      debugPrint('Search Error: $e');
+      setState(() {
+        _searchError = 'حدث خطأ: $e';
+        _searchResults = [];
+      });
+    } finally {
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
   Widget _buildDrawerItem(
     BuildContext context,
     String title,
@@ -600,36 +750,45 @@ class DashboardScreenState extends State<DashboardScreen> {
                   Icons.person,
                   const ProfileScreen(),
                 ),
-                _buildDrawerItem(
-                  context,
-                  'تتبع تحليل السكر',
-                  Icons.monitor_heart,
-                  const GlucoseTrackingScreen(),
-                ),
-                _buildDrawerItem(
-                  context,
-                  'التذكيرات',
-                  Icons.notifications,
-                  const RemindersScreen(),
-                ),
-                _buildDrawerItem(
-                  context,
-                  'التنبؤ بمرض السكر',
-                  Icons.analytics,
-                  const AIAnalysisScreen(),
-                ),
-                _buildDrawerItem(
-                  context,
-                  'الأدوية البديلة',
-                  Icons.medical_services,
-                  const AlternativeMedicationsScreen(),
-                ),
-                _buildDrawerItem(
-                  context,
-                  'الشات بوت',
-                  Icons.chat,
-                  const ChatbotScreen(),
-                ),
+                if (_accountType == 'patient') ...[
+                  _buildDrawerItem(
+                    context,
+                    'تتبع تحليل السكر',
+                    Icons.monitor_heart,
+                    const GlucoseTrackingScreen(),
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    'التذكيرات',
+                    Icons.notifications,
+                    const RemindersScreen(),
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    'التنبؤ بمرض السكر',
+                    Icons.analytics,
+                    const AIAnalysisScreen(),
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    'الأدوية البديلة',
+                    Icons.medical_services,
+                    const AlternativeMedicationsScreen(),
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    'الشات بوت',
+                    Icons.chat,
+                    const ChatbotScreen(),
+                  ),
+                ],
+                if (_accountType == 'doctor')
+                  _buildDrawerItem(
+                    context,
+                    'متابعة المرضى',
+                    Icons.people,
+                    const PatientMonitoringScreen(),
+                  ),
                 const Divider(),
                 _buildDrawerItem(
                   context,
@@ -659,7 +818,121 @@ class DashboardScreenState extends State<DashboardScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                Expanded(child: DashboardGrid(buildDashboardButton: _buildDashboardButton)),
+                if (_accountType == 'patient') ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      textDirection: TextDirection.rtl,
+                      decoration: InputDecoration(
+                        hintText: 'البحث عن الطبيب',
+                        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, color: Colors.teal),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchResults = [];
+                                    _searchError = null;
+                                  });
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.9),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                      onSubmitted: (value) {
+                        _searchDoctors(value);
+                      },
+                    ),
+                  ),
+                  if (_isSearching)
+                    const Center(child: CircularProgressIndicator()),
+                  if (_searchError != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        _searchError!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red),
+                      ),
+                    ),
+                  if (_searchResults.isNotEmpty)
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          final doctor = _searchResults[index];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: ListTile(
+                              leading: const Icon(Icons.person, color: Colors.teal),
+                              title: Text(
+                                '${doctor['first_name'] ?? 'غير متوفر'} ${doctor['last_name'] ?? ''}',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              subtitle: Text(
+                                doctor['specialization'] ?? 'غير محدد',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              trailing: ElevatedButton(
+                                onPressed: () {
+                                  // عرض رسالة تأكيد عند النقر على زر طلب الاستشارة
+                                  _showSnackBar(
+                                    'تم طلب استشارة مع الدكتور ${doctor['first_name']} ${doctor['last_name']}',
+                                    Colors.green,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                child: const Text(
+                                  'طلب استشارة',
+                                  style: TextStyle(color: Colors.white, fontSize: 14),
+                                ),
+                              ),
+                              onTap: () {
+                                _showSnackBar(
+                                  'تم تحديد الطبيب: ${doctor['first_name']}',
+                                  Colors.green,
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  if (!_isSearching && _searchResults.isEmpty && _searchError == null)
+                    Expanded(
+                      child: DashboardGrid(
+                        buildDashboardButton: _buildDashboardButton,
+                        accountType: _accountType,
+                      ),
+                    ),
+                ] else
+                  Expanded(
+                    child: DashboardGrid(
+                      buildDashboardButton: _buildDashboardButton,
+                      accountType: _accountType,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -676,8 +949,61 @@ class DashboardGrid extends StatelessWidget {
     required String imagePath,
     required Widget screen,
   }) buildDashboardButton;
+  final String? accountType;
 
-  const DashboardGrid({super.key, required this.buildDashboardButton});
+  const DashboardGrid({
+    super.key,
+    required this.buildDashboardButton,
+    required this.accountType,
+  });
+
+  List<Map<String, dynamic>> get _dashboardItems {
+    List<Map<String, dynamic>> items = [
+      {
+        'title': 'الملف الشخصي',
+        'imagePath': 'assets/images/profile.png.webp',
+        'screen': const ProfileScreen(),
+      },
+    ];
+
+    if (accountType == 'patient') {
+      items.insertAll(0, [
+        {
+          'title': 'تتبع تحليل السكر',
+          'imagePath': 'assets/images/glucose_tracking.png.webp',
+          'screen': const GlucoseTrackingScreen(),
+        },
+        {
+          'title': 'التذكيرات',
+          'imagePath': 'assets/images/reminders.png.webp',
+          'screen': const RemindersScreen(),
+        },
+        {
+          'title': 'التنبؤ بمرض السكر',
+          'imagePath': 'assets/images/ai_analysis.png.webp',
+          'screen': const AIAnalysisScreen(),
+        },
+        {
+          'title': 'الأدوية البديلة',
+          'imagePath': 'assets/images/medications.png.webp',
+          'screen': const AlternativeMedicationsScreen(),
+        },
+        {
+          'title': 'الشات بوت',
+          'imagePath': 'assets/images/chatbot.png.webp',
+          'screen': const ChatbotScreen(),
+        },
+      ]);
+    } else if (accountType == 'doctor') {
+      items.insert(0, {
+        'title': 'متابعة المرضى',
+        'imagePath': 'assets/images/patient_monitoring.png.webp',
+        'screen': const PatientMonitoringScreen(),
+      });
+    }
+
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -702,36 +1028,3 @@ class DashboardGrid extends StatelessWidget {
     );
   }
 }
-
-final List<Map<String, dynamic>> _dashboardItems = [
-  {
-    'title': 'تتبع تحليل السكر',
-    'imagePath': 'assets/images/glucose_tracking.png.webp',
-    'screen': const GlucoseTrackingScreen(),
-  },
-  {
-    'title': 'التذكيرات',
-    'imagePath': 'assets/images/reminders.png.webp',
-    'screen': const RemindersScreen(),
-  },
-  {
-    'title': 'التنبؤ بمرض السكر',
-    'imagePath': 'assets/images/ai_analysis.png.webp',
-    'screen': const AIAnalysisScreen(),
-  },
-  {
-    'title': 'الأدوية البديلة',
-    'imagePath': 'assets/images/medications.png.webp',
-    'screen': const AlternativeMedicationsScreen(),
-  },
-  {
-    'title': 'الشات بوت',
-    'imagePath': 'assets/images/chatbot.png.webp',
-    'screen': const ChatbotScreen(),
-  },
-  {
-    'title': 'الملف الشخصي',
-    'imagePath': 'assets/images/profile.png.webp',
-    'screen': const ProfileScreen(),
-  },
-];
