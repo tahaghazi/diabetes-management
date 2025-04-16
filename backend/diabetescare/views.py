@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import GlucoseTrackingSerializer
 from profiles.models import PatientProfile
 from .models import GlucoseTracking 
+from .import predict
+import json
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -60,3 +62,32 @@ def list_glucose_readings(request):
         "message": "Glucose readings retrieved successfully!",
         "data": serializer.data
     }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def predict_diabetes(request):
+    try:
+        data = json.loads(request.body)
+        
+        required_fields = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
+                          'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
+        for field in required_fields:
+            if field not in data:
+                return Response({"error": f"Missing required field: {field}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        for field in required_fields:
+            try:
+                data[field] = float(data[field])
+            except (ValueError, TypeError):
+                return Response({"error": f"Invalid value for {field}. Must be a number."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        result = predict.predict_diabetes(data)
+        
+        return Response(result, status=status.HTTP_200_OK)
+    
+    except json.JSONDecodeError:
+        return Response({"error": "Invalid JSON format in request body"}, status=status.HTTP_400_BAD_REQUEST)
+    except predict.FileNotFoundError as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
