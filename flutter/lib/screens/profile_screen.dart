@@ -4,7 +4,8 @@ import 'edit_profile_screen.dart';
 import 'package:diabetes_management/config/theme.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'dart:convert';
-import '../main.dart'; 
+import '../main.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,30 +20,30 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
   String? _email;
   String? _accountType;
   String? _specialization;
-  String? _medicalHistory;
   bool _isLoading = false;
   Map<String, dynamic>? _linkedDoctor;
+  List<Map<String, dynamic>> _glucoseReadings = [];
+  String? _token;
+  final HttpService _httpService = HttpService();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Register WidgetsBindingObserver
-    _loadUserData();
+    WidgetsBinding.instance.addObserver(this);
+    _loadTokenAndFetchData();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Subscribe to the RouteObserver
     final ModalRoute? route = ModalRoute.of(context);
-    if (route is ModalRoute) {
-      routeObserver.subscribe(this, route as ModalRoute);
+    if (route != null) {
+      routeObserver.subscribe(this, route);
     }
   }
 
   @override
   void dispose() {
-    // Unsubscribe from both observers
     routeObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -50,9 +51,8 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
 
   @override
   void didPopNext() {
-    // Called when ProfileScreen becomes visible again after another screen pops
     debugPrint('ProfileScreen: didPopNext called, refreshing data...');
-    _loadUserData();
+    _loadTokenAndFetchData();
   }
 
   @override
@@ -60,18 +60,42 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       debugPrint('ProfileScreen: App resumed, refreshing data...');
-      _loadUserData();
+      _loadTokenAndFetchData();
     }
   }
 
-  Future<void> _loadUserData() async {
+  Future<void> _loadTokenAndFetchData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Fetch profile data from API
-      final response = await HttpService().makeRequest(
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? accessToken = prefs.getString('access_token');
+      if (accessToken != null) {
+        setState(() {
+          _token = accessToken;
+        });
+        _httpService.setTokens(accessToken, '');
+        await _loadUserData();
+        if (_accountType == 'patient') {
+          await _fetchGlucoseReadings();
+        }
+      } else {
+        _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
+      }
+    } catch (e) {
+      _showSnackBar('فشل تحميل البيانات: $e', Colors.red);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final response = await _httpService.makeRequest(
         method: 'GET',
         url: Uri.parse('http://10.0.2.2:8000/api/profile/'),
         headers: {'Content-Type': 'application/json'},
@@ -89,23 +113,18 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
           _firstName = responseData['first_name'];
           _lastName = responseData['last_name'];
 
-          // Determine account type based on response fields
           if (responseData.containsKey('medical_history')) {
             _accountType = 'patient';
-            _medicalHistory = responseData['medical_history'] ?? 'غير متوفر';
             _specialization = null;
           } else if (responseData.containsKey('specialization')) {
             _accountType = 'doctor';
             _specialization = responseData['specialization'] ?? 'غير محدد';
-            _medicalHistory = null;
           } else {
             _accountType = null;
-            _medicalHistory = null;
             _specialization = null;
           }
         });
 
-        // Fetch linked doctor if the user is a patient
         if (_accountType == 'patient') {
           await _fetchLinkedDoctor();
         }
@@ -114,16 +133,12 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
       }
     } catch (e) {
       _showSnackBar('فشل تحميل البيانات: $e', Colors.red);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
   Future<void> _fetchLinkedDoctor() async {
     try {
-      final response = await HttpService().makeRequest(
+      final response = await _httpService.makeRequest(
         method: 'GET',
         url: Uri.parse('http://10.0.2.2:8000/api/my-doctor/'),
         headers: {'Content-Type': 'application/json'},
@@ -164,6 +179,31 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     }
   }
 
+  Future<void> _fetchGlucoseReadings() async {
+    if (_token == null) return;
+
+    try {
+      final response = await _httpService.makeRequest(
+        method: 'GET',
+        url: Uri.parse('http://10.0.2.2:8000/api/glucose/list/'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response != null && response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['data'] != null) {
+          setState(() {
+            _glucoseReadings = List<Map<String, dynamic>>.from(responseData['data']);
+          });
+        }
+      } else {
+        _showSnackBar('فشل في جلب قياسات السكر!', Colors.red);
+      }
+    } catch (e) {
+      _showSnackBar('فشل في جلب قياسات السكر: $e', Colors.red);
+    }
+  }
+
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -179,281 +219,289 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     );
   }
 
-  // Helper method to split medical history into a list of readings
-  List<String> _getMedicalHistoryReadings() {
-    if (_medicalHistory == null || _medicalHistory == 'غير متوفر') {
-      return ['غير متوفر'];
-    }
-    // Split the medical history by newlines and remove "Glucose Readings:" prefix
-    List<String> readings = _medicalHistory!.split('\n');
-    if (readings.isNotEmpty && readings[0].startsWith('Glucose Readings:')) {
-      readings.removeAt(0); // Remove the "Glucose Readings:" line
-    }
-    // Remove empty strings and trim each reading
-    return readings
-        .where((reading) => reading.trim().isNotEmpty)
-        .map((reading) => reading.trim())
-        .toList();
+  List<Map<String, dynamic>> _parseGlucoseReadings() {
+    const glucoseTypeMap = {
+      'FBS': 'صائم',
+      'RBS': 'عشوائي',
+      'PPBS': 'بعد الأكل',
+    };
+
+    return _glucoseReadings.map((reading) {
+      return {
+        'id': reading['id']?.toString() ?? '',
+        'type': glucoseTypeMap[reading['glucose_type']] ?? reading['glucose_type']?.toString() ?? '',
+        'level': reading['glucose_value']?.toString() ?? '',
+        'dateTime': reading['timestamp']?.toString() ?? '',
+      };
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'الملف الشخصي',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          centerTitle: true,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.appBarGradient,
-            ),
-          ),
-          elevation: 4,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: _loadUserData,
-              tooltip: 'تحديث البيانات',
-            ),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'الملف الشخصي',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
         ),
-        body: Container(
+        centerTitle: true,
+        flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: AppTheme.backgroundGradient,
+            gradient: AppTheme.appBarGradient,
           ),
-          child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-                  ),
-                )
-              : SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-                    child: Column(
-                      children: [
-                        // الكارد الرئيسي
+        ),
+        elevation: 4,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadTokenAndFetchData,
+            tooltip: 'تحديث البيانات',
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ),
+        child: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                ),
+              )
+            : SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Card(
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.teal, width: 3),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: AssetImage(
+                                    _accountType == 'doctor'
+                                        ? 'assets/images/doctor_logo.png.webp'
+                                        : 'assets/images/patient_logo.png.webp',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: Colors.teal.shade900,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _email ?? 'الإيميل',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.grey[700],
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _accountType == 'doctor' ? 'دكتور' : 'مريض',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: Colors.teal,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(
+                                color: Colors.grey[300],
+                                thickness: 1.5,
+                              ),
+                              const SizedBox(height: 16),
+                              if (_accountType == 'patient')
+                                _linkedDoctor != null
+                                    ? Column(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'الدكتور المرتبط',
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  color: Colors.teal.shade800,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            '${_linkedDoctor!['first_name'] ?? 'غير متوفر'} ${_linkedDoctor!['last_name'] ?? ''}',
+                                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                  color: Colors.black87,
+                                                ),
+                                          ),
+                                          Text(
+                                            'التخصص: ${_linkedDoctor!['specialization'] ?? 'غير محدد'}',
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  color: Colors.grey[600],
+                                                ),
+                                          ),
+                                        ],
+                                      )
+                                    : Text(
+                                        'لا يوجد دكتور مرتبط',
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                              color: Colors.grey[600],
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                              if (_accountType == 'doctor')
+                                Text(
+                                  'التخصص: ${_specialization ?? 'غير محدد'}',
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: Colors.black87,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      if (_accountType == 'patient')
                         Card(
                           elevation: 8,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Container(
-                            padding: const EdgeInsets.all(24.0),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.teal.shade50,
-                                  Colors.white,
-                                  Colors.teal.shade100,
-                                ],
-                              ),
-                            ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // الصورة الرمزية
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.teal, width: 4),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 60,
-                                    backgroundColor: Colors.white,
-                                    backgroundImage: AssetImage(
-                                      _accountType == 'doctor'
-                                          ? 'assets/images/doctor_logo.png.webp'
-                                          : 'assets/images/patient_logo.png.webp',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                // الإيميل
                                 Text(
-                                  _email ?? 'الإيميل',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        color: Colors.grey[700],
-                                        fontSize: 16,
-                                      ),
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                const SizedBox(height: 8),
-                                // الاسم
-                                Text(
-                                  '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        color: Colors.teal.shade900,
+                                  'السجل المرضي',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        color: Colors.teal.shade800,
                                         fontWeight: FontWeight.bold,
                                       ),
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'قياسات السكر',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                                 const SizedBox(height: 8),
-                                // نوع الحساب
-                                Text(
-                                  _accountType == 'doctor' ? 'دكتور' : 'مريض',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        color: Colors.teal,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 18,
+                                _parseGlucoseReadings().isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          'لا توجد قياسات متاحة',
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                color: Colors.grey[600],
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                        ),
+                                      )
+                                    : SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: DataTable(
+                                          columns: const [
+                                            DataColumn(
+                                              label: Text(
+                                                'الرقم',
+                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            DataColumn(
+                                              label: Text(
+                                                'نوع القياس',
+                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            DataColumn(
+                                              label: Text(
+                                                'مستوى السكر',
+                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            DataColumn(
+                                              label: Text(
+                                                'التوقيت',
+                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                          rows: _parseGlucoseReadings()
+                                              .asMap()
+                                              .entries
+                                              .map(
+                                                (entry) {
+                                                  final index = entry.key + 1;
+                                                  final reading = entry.value;
+                                                  
+                                                  final dateTime = DateTime.parse(reading['dateTime']);
+                                                  final date = '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+                                                  final time = DateFormat('h:mm a').format(dateTime).replaceAll('AM', 'صباحاً').replaceAll('PM', 'مساءاً');
+                                                  
+                                                  return DataRow(
+                                                    cells: [
+                                                      DataCell(Text(index.toString())),
+                                                      DataCell(Text(reading['type'])),
+                                                      DataCell(Text(reading['level'])),
+                                                      DataCell(
+                                                        Column(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(date),
+                                                            Text(time),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              )
+                                              .toList(),
+                                          columnSpacing: 20,
+                                          dataRowMinHeight: 50,
+                                          dataRowMaxHeight: 50,
+                                          headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
+                                        ),
                                       ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 16),
-                                Divider(
-                                  color: Colors.grey[300],
-                                  thickness: 1.5,
-                                ),
-                                const SizedBox(height: 16),
-                                // التخصص أو السجل الصحي
-                                if (_accountType == 'doctor')
-                                  Text(
-                                    'التخصص: ${_specialization ?? 'غير محدد'}',
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                          color: Colors.black87,
-                                          fontSize: 16,
-                                        ),
-                                    textAlign: TextAlign.center,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                  ),
-                                if (_accountType == 'patient') ...[
-                                  Text(
-                                    'السجل الصحي:',
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                          color: Colors.black87,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Display medical history as a scrollable list
-                                  SizedBox(
-                                    height: 150, // Adjust height as needed
-                                    child: ListView.builder(
-                                      itemCount: _getMedicalHistoryReadings().length,
-                                      itemBuilder: (context, index) {
-                                        final reading = _getMedicalHistoryReadings()[index];
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                          child: Text(
-                                            reading,
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Colors.black87,
-                                                  fontSize: 14,
-                                                ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        // كارد الدكتور المرتبط
-                        if (_accountType == 'patient')
-                          Card(
-                            elevation: 6,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'الدكتور المرتبط',
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          color: Colors.teal.shade800,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _linkedDoctor != null
-                                      ? Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Icon(Icons.person, color: Colors.teal, size: 20),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    '${_linkedDoctor!['first_name'] ?? 'غير متوفر'} ${_linkedDoctor!['last_name'] ?? ''}',
-                                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                                          color: Colors.black87,
-                                                          fontWeight: FontWeight.w600,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Icon(Icons.medical_services, color: Colors.teal, size: 20),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    'التخصص: ${_linkedDoctor!['specialization'] ?? 'غير محدد'}',
-                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                          color: Colors.grey[600],
-                                                        ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        )
-                                      : Text(
-                                          'لا يوجد دكتور مرتبط',
-                                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                                color: Colors.grey[600],
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 24),
-                        // زر تعديل البيانات
-                        ElevatedButton(
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.center,
+                        child: ElevatedButton(
                           onPressed: () async {
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const EditProfileScreen()),
                             );
                             if (result == true) {
-                              await _loadUserData();
+                              await _loadTokenAndFetchData();
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -474,17 +522,16 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
                                     ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-        ),
+              ),
       ),
     );
   }

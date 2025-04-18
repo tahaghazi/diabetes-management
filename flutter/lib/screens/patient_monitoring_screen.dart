@@ -7,10 +7,10 @@ class PatientMonitoringScreen extends StatefulWidget {
   const PatientMonitoringScreen({super.key});
 
   @override
-  _PatientMonitoringScreenState createState() => _PatientMonitoringScreenState();
+  PatientMonitoringScreenState createState() => PatientMonitoringScreenState();
 }
 
-class _PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
+class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
   List<Map<String, dynamic>> _patients = [];
   bool _isLoading = false;
   String? _errorMessage;
