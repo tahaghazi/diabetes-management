@@ -29,7 +29,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   String? _accountType;
   String? _specialization;
   int _notificationCount = 0;
-  int _patientCount = 0; // لتخزين عدد المرضى
+  int _patientCount = 0;
   Timer? _notificationTimer;
   List<Map<String, dynamic>> _lastNotifications = [];
   final TextEditingController _searchController = TextEditingController();
@@ -40,7 +40,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData(); // تحميل بيانات المستخدم أولاً
+    _loadUserData();
     _startNotificationPolling();
     _searchController.addListener(() {
       setState(() {});
@@ -83,7 +83,6 @@ class DashboardScreenState extends State<DashboardScreen> {
       debugPrint('Tokens updated in HttpService: Access Token: $accessToken, Refresh Token: $refreshToken');
     }
 
-    // جلب عدد المرضى بعد تحميل بيانات المستخدم
     if (_accountType == 'doctor') {
       await _fetchPatientCount();
     }
@@ -296,9 +295,9 @@ class DashboardScreenState extends State<DashboardScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 4.0),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.teal.withOpacity(0.05),
+                                  color: Color.fromRGBO(0, 128, 128, 0.05),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.teal.withOpacity(0.2)),
+                                  border: Border.all(color: Color.fromRGBO(0, 128, 128, 0.2)),
                                 ),
                                 padding: const EdgeInsets.all(8.0),
                                 child: Column(
@@ -646,7 +645,7 @@ class DashboardScreenState extends State<DashboardScreen> {
         children: [
           if (_showWelcomeMessage)
             Text(
-              'مرحبًا بك في تطبيق إدارة مرض السكري',
+              'مرحبًا بك في تطبيق إدارة مرض السكر',
               style: Theme.of(context).textTheme.headlineMedium,
               textAlign: TextAlign.center,
             ),
@@ -875,7 +874,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                             )
                           : null,
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.9),
+                      fillColor: Color.fromRGBO(255, 255, 255, 0.9),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                         borderSide: BorderSide.none,

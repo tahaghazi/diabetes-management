@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
-import 'package:diabetes_management/config/theme.dart'; // استيراد الثيم
+import 'package:diabetes_management/config/theme.dart';
 
 class RemindersScreen extends StatefulWidget {
   const RemindersScreen({super.key});
@@ -39,7 +39,6 @@ class RemindersScreenState extends State<RemindersScreen> {
     'hydration': 'شرب الماء',
   };
 
-  // خريطة الألوان الجديدة لكل نوع تذكير
   final Map<String, List<Color>> _reminderTypeColors = {
     'تحليل السكر': [Colors.purple.shade400, Colors.purple.shade200],
     'الدواء': [Colors.orange.shade400, Colors.orange.shade200],
@@ -74,7 +73,6 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'GET',
         url: Uri.parse('http://10.0.2.2:8000/api/get-reminders/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/get-reminders/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -155,7 +153,6 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'POST',
         url: Uri.parse('http://10.0.2.2:8000/api/create-reminder/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/create-reminder/'),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
@@ -227,7 +224,6 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'PUT',
         url: Uri.parse('http://10.0.2.2:8000/api/update-reminder/$id/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/update-reminder/$id/'),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
@@ -283,7 +279,6 @@ class RemindersScreenState extends State<RemindersScreen> {
       var response = await HttpService().makeRequest(
         method: 'DELETE',
         url: Uri.parse('http://10.0.2.2:8000/api/delete-reminder/$id/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/delete-reminder/$id/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -805,13 +800,13 @@ class RemindersScreenState extends State<RemindersScreen> {
                           Icon(
                             Icons.notifications_off,
                             size: 80,
-                            color: Theme.of(context).primaryColor.withOpacity(0.5),
+                            color: Color.fromRGBO(0, 128, 128, 0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'لا توجد تذكيرات حاليًا',
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: Theme.of(context).primaryColor.withOpacity(0.7),
+                                  color: Color.fromRGBO(0, 128, 128, 0.7),
                                 ),
                           ),
                         ],
@@ -840,12 +835,12 @@ class RemindersScreenState extends State<RemindersScreen> {
                                   color: Theme.of(context).primaryColor,
                                 ),
                           ),
+                          initiallyExpanded: true,
                           children: reminders.asMap().entries.map((entry) {
                             final index = entry.key;
                             final reminder = entry.value;
                             return _buildReminderItem(reminder, index);
                           }).toList(),
-                          initiallyExpanded: true,
                         );
                       }).toList(),
                     ),

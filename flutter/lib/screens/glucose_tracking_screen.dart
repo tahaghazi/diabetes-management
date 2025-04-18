@@ -5,6 +5,7 @@ import 'package:diabetes_management/config/theme.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'previous_readings_screen.dart';
 
 class GlucoseTrackingScreen extends StatefulWidget {
   const GlucoseTrackingScreen({super.key});
@@ -50,9 +51,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
       final response = await _httpService.makeRequest(
         method: 'GET',
         url: Uri.parse('http://10.0.2.2:8000/api/glucose/list/'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response != null && response.statusCode == 200) {
@@ -77,9 +76,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
       final response = await _httpService.makeRequest(
         method: 'GET',
         url: Uri.parse('http://10.0.2.2:8000/api/profile/'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response != null && response.statusCode == 200) {
@@ -107,6 +104,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
     if (!mounted) return;
     final TimeOfDay? pickedTime = await showTimePicker(
+      // ignore: use_build_context_synchronously
       context: context,
       initialTime: TimeOfDay.now(),
     );
@@ -146,6 +144,13 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
         _timeController.text.isNotEmpty &&
         _selectedDateTime != null) {
       try {
+        double glucoseValue = double.parse(_glucoseController.text);
+        // التحقق من أن القيمة بين 20 و600
+        if (glucoseValue < 20 || glucoseValue > 600) {
+          _showSnackBar('أدخل القياس الصحيح للسكر (بين 20 و600 mg/dL)!', Colors.red);
+          return;
+        }
+
         final Map<String, String> readingTypeMap = {
           'صائم': 'FBS',
           'عشوائي': 'RBS',
@@ -156,16 +161,14 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
         final body = {
           'glucose_type': readingTypeMap[_selectedReadingType]!,
-          'glucose_value': double.parse(_glucoseController.text),
+          'glucose_value': glucoseValue,
           'timestamp': isoTimestamp,
         };
 
         final response = await _httpService.makeRequest(
           method: 'POST',
           url: Uri.parse('http://10.0.2.2:8000/api/glucose/add/'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: {'Content-Type': 'application/json'},
           body: body,
         );
 
@@ -179,7 +182,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
           _showSnackBar('تمت إضافة القراءة بنجاح!', Colors.green);
           await _fetchGlucoseReadings();
-          await _fetchMedicalHistory(); // Update SharedPreferences
+          await _fetchMedicalHistory();
         } else {
           _showSnackBar('فشل في إضافة القراءة!', Colors.red);
         }
@@ -225,6 +228,20 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
             gradient: AppTheme.appBarGradient,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PreviousReadingsScreen(readings: glucoseReadings),
+                ),
+              );
+            },
+            tooltip: 'القراءات السابقة',
+          ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -359,50 +376,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
               ElevatedButton(
                 onPressed: _addGlucoseReading,
                 child: const Text('حفظ القراءة'),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'القراءات السابقة',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: glucoseReadings.length,
-                  itemBuilder: (context, index) {
-                    final reading = glucoseReadings[index];
-                    final DateTime parsedDateTime = DateTime.parse(reading['timestamp']);
-                    final String formattedDate = DateFormat('yyyy-MM-dd').format(parsedDateTime);
-                    final String formattedTime = DateFormat('h:mm a')
-                        .format(parsedDateTime)
-                        .replaceAll('AM', 'صباحًا')
-                        .replaceAll('PM', 'مساءً');
-
-                    final Map<String, String> readingTypeReverseMap = {
-                      'FBS': 'صائم',
-                      'RBS': 'عشوائي',
-                      'PPBS': 'بعد الأكل',
-                    };
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 5),
-                      child: ListTile(
-                        leading: const Icon(Icons.water_drop, color: Colors.teal),
-                        title: Text(
-                          '${reading['glucose_value']} mg/dL',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('التاريخ: $formattedDate'),
-                            Text('الوقت: $formattedTime'),
-                            Text('نوع القراءة: ${readingTypeReverseMap[reading['glucose_type']]}'),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
