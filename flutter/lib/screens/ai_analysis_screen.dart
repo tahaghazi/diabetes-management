@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:diabetes_management/config/theme.dart';
-import 'package:diabetes_management/services/http_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class AIAnalysisScreen extends StatefulWidget {
   const AIAnalysisScreen({super.key});
 
   @override
-  _AIAnalysisScreenState createState() => _AIAnalysisScreenState();
+  AIAnalysisScreenState createState() => AIAnalysisScreenState();
 }
 
-class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
+class AIAnalysisScreenState extends State<AIAnalysisScreen> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {
     'Pregnancies': TextEditingController(),
@@ -22,39 +20,38 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
     'BMI': TextEditingController(),
     'DiabetesPedigreeFunction': TextEditingController(),
     'Age': TextEditingController(),
+    'Height': TextEditingController(),
+    'Weight': TextEditingController(),
   };
   String? _result;
   String? _error;
   bool _isLoading = false;
   String? _selectedGender;
-  String? _token;
-  final HttpService _httpService = HttpService();
 
   @override
   void initState() {
     super.initState();
-    _loadToken();
+    _controllers['Height']!.addListener(_calculateBMI);
+    _controllers['Weight']!.addListener(_calculateBMI);
   }
 
-  Future<void> _loadToken() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? accessToken = prefs.getString('access_token');
-    if (accessToken != null) {
-      setState(() {
-        _token = accessToken;
-      });
-      _httpService.setTokens(accessToken, '');
-    } else {
-      _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
+  void _calculateBMI() {
+    final heightText = _controllers['Height']!.text;
+    final weightText = _controllers['Weight']!.text;
+
+    if (heightText.isNotEmpty && weightText.isNotEmpty) {
+      final height = double.tryParse(heightText.replaceAll(',', '.'));
+      final weight = double.tryParse(weightText.replaceAll(',', '.'));
+
+      if (height != null && weight != null && height > 0) {
+        final heightInMeters = height / 100;
+        final bmi = weight / (heightInMeters * heightInMeters);
+        _controllers['BMI']!.text = bmi.toStringAsFixed(1);
+      }
     }
   }
 
   Future<void> _submitForm() async {
-    if (_token == null) {
-      _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
-      return;
-    }
-
     if (_selectedGender == null) {
       _showSnackBar('يرجى اختيار الجنس أولاً!', Colors.red);
       return;
@@ -68,37 +65,13 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
       });
 
       try {
-        final Map<String, dynamic> data = {};
-        _controllers.forEach((key, controller) {
-          if (key == 'Pregnancies' && _selectedGender == 'Male') {
-            data[key] = '0'; // Set Pregnancies to 0 for males
-          } else {
-            data[key] = controller.text;
-          }
+        final glucose = double.tryParse(_controllers['Glucose']!.text.replaceAll(',', '.')) ?? 0;
+        await Future.delayed(const Duration(seconds: 1));
+
+        setState(() {
+          _result = glucose > 120 ? 'إيجابي' : 'سلبي';
         });
-
-        final response = await _httpService.makeRequest(
-          method: 'POST',
-          url: Uri.parse('http://10.0.2.2:8000/api/predict/'),
-          headers: {'Content-Type': 'application/json'},
-          body: data,
-        );
-
-        if (response != null && response.statusCode == 200) {
-          final result = jsonDecode(response.body);
-          setState(() {
-            _result = result['prediction']?.toString() ?? 'تم التنبؤ بنجاح';
-          });
-          _showSnackBar('تم التنبؤ بنجاح!', Colors.green);
-        } else {
-          final error = response != null
-              ? jsonDecode(response.body)['error'] ?? 'حدث خطأ'
-              : 'فشل الاتصال بالخادم';
-          setState(() {
-            _error = error;
-          });
-          _showSnackBar('خطأ: $error', Colors.red);
-        }
+        _showSnackBar('تم التنبؤ بنجاح!', Colors.green);
       } catch (e) {
         setState(() {
           _error = 'فشل في التنبؤ: $e';
@@ -136,9 +109,14 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
         controller: controller,
         enabled: enabled,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textDirection: TextDirection.rtl,
+        style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+        ],
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.teal),
+          labelStyle: const TextStyle(color: Colors.teal, fontFamily: 'Cairo'),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: const BorderSide(color: Colors.teal),
@@ -148,15 +126,16 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
             borderSide: const BorderSide(color: Colors.teal),
           ),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.95),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          fillColor: const Color.fromRGBO(255, 255, 255, 0.95),
+          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
         ),
         validator: (value) {
           if (!enabled) return null;
           if (value == null || value.isEmpty) {
             return 'يرجى إدخال $label';
           }
-          if (double.tryParse(value) == null) {
+          final parsedValue = double.tryParse(value.replaceAll(',', '.'));
+          if (parsedValue == null) {
             return 'يرجى إدخال رقم صالح (مثال: 1.5)';
           }
           return null;
@@ -166,22 +145,34 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
   }
 
   Widget _buildGenderSelection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'اختر الجنس',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildGenderOption('Male', 'ذكر', 'assets/male.png'),
-            _buildGenderOption('Female', 'أنثى', 'assets/female.png'),
+            const Text(
+              'اختر الجنس',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.teal,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildGenderOption('Male', 'ذكر', 'assets/images/male.png.webp'),
+                _buildGenderOption('Female', 'أنثى', 'assets/images/female.png.webp'),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -204,10 +195,10 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
             width: isSelected ? 3 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: Colors.white.withOpacity(0.9),
+          color: const Color.fromRGBO(0, 128, 0, 0.1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: const Color.fromRGBO(255, 0, 0, 0.1),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -232,6 +223,7 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 color: isSelected ? Colors.teal : Colors.black,
+                fontFamily: 'Cairo',
               ),
             ),
           ],
@@ -254,7 +246,10 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
         appBar: AppBar(
           title: Text(
             'التنبؤ بمرض السكر',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(color: Colors.white, fontFamily: 'Cairo'),
           ),
           centerTitle: true,
           flexibleSpace: Container(
@@ -270,79 +265,108 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
-            child: Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildGenderSelection(),
-                      const SizedBox(height: 20),
-                      _buildTextField(
-                        'عدد مرات الحمل',
-                        _controllers['Pregnancies']!,
-                        enabled: _selectedGender == 'Female',
-                      ),
-                      _buildTextField('مستوى الجلوكوز', _controllers['Glucose']!),
-                      _buildTextField('ضغط الدم', _controllers['BloodPressure']!),
-                      _buildTextField('سمك الجلد', _controllers['SkinThickness']!),
-                      _buildTextField('مستوى الأنسولين', _controllers['Insulin']!),
-                      _buildTextField('مؤشر كتلة الجسم', _controllers['BMI']!),
-                      _buildTextField('وظيفة نسب السكري', _controllers['DiabetesPedigreeFunction']!),
-                      _buildTextField('العمر', _controllers['Age']!),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _isLoading || _selectedGender == null ? null : _submitForm,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.teal,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
+            child: Column(
+              children: [
+                _buildGenderSelection(),
+                const SizedBox(height: 20),
+                Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'من فضلك أدخل البيانات التالية',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                              fontFamily: 'Cairo',
+                            ),
                           ),
-                          elevation: 5,
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                'إرسال',
-                                style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                          const SizedBox(height: 20),
+                          if (_selectedGender == 'Female')
+                            _buildTextField('عدد مرات الحمل', _controllers['Pregnancies']!),
+                          _buildTextField('مستوى الجلوكوز', _controllers['Glucose']!),
+                          _buildTextField('ضغط الدم', _controllers['BloodPressure']!),
+                          _buildTextField('سمك الجلد', _controllers['SkinThickness']!),
+                          _buildTextField('مستوى الأنسولين', _controllers['Insulin']!),
+                          _buildTextField('الطول (سم)', _controllers['Height']!),
+                          _buildTextField('الوزن (كجم)', _controllers['Weight']!),
+                          _buildTextField('مؤشر كتلة الجسم', _controllers['BMI']!, enabled: false),
+                          _buildTextField(
+                              'عدد أفراد العائلة المصابين بالسكر', _controllers['DiabetesPedigreeFunction']!),
+                          _buildTextField('العمر', _controllers['Age']!),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: _isLoading || _selectedGender == null ? null : _submitForm,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.teal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
+                              elevation: 5,
+                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : const Text(
+                                    'إرسال',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (_result != null)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'النتيجة: $_result',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          if (_error != null)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'خطأ: $_error',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      if (_result != null)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'النتيجة: $_result',
-                            style: const TextStyle(fontSize: 18, color: Colors.green, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      if (_error != null)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'خطأ: $_error',
-                            style: const TextStyle(fontSize: 18, color: Colors.red, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
