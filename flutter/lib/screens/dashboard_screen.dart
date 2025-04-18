@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'glucose_tracking_screen.dart';
 import 'reminders_screen.dart';
-import 'chatbot_screen.dart';
+import 'awareness_screen.dart';
 import 'alternative_medications_screen.dart';
 import 'ai_analysis_screen.dart';
 import 'profile_screen.dart';
@@ -817,9 +817,9 @@ class DashboardScreenState extends State<DashboardScreen> {
                   ),
                   _buildDrawerItem(
                     context,
-                    'الشات بوت',
+                    'التوعية والإرشادات',
                     Icons.chat,
-                    const ChatbotScreen(),
+                    const AwarenessScreen(),
                   ),
                 ],
                 if (_accountType == 'doctor')
@@ -1062,9 +1062,9 @@ class DashboardGrid extends StatelessWidget {
           'screen': const AlternativeMedicationsScreen(),
         },
         {
-          'title': 'الشات بوت',
-          'imagePath': 'assets/images/chatbot.png.webp',
-          'screen': const ChatbotScreen(),
+          'title': 'التوعية والإرشادات',
+          'imagePath': 'assets/images/help.png.webp',
+          'screen': const AwarenessScreen(),
         },
       ]);
     } else if (accountType == 'doctor') {
