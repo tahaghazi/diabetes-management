@@ -8,7 +8,7 @@ import 'screens/glucose_tracking_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'screens/ai_analysis_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/chatbot_screen.dart';
+import 'screens/awareness_screen.dart';
 import 'screens/alternative_medications_screen.dart';
 import 'screens/account_type_screen.dart';
 import 'screens/reset_password_screen.dart';
@@ -52,7 +52,7 @@ class DiabetesApp extends StatelessWidget {
         '/reset_password': (context) => ResetPasswordScreen(
               email: ModalRoute.of(context)!.settings.arguments as String,
             ),
-        '/chatbot': (context) => const ChatbotScreen(),
+        '/Awareness': (context) => const AwarenessScreen(),
         '/alternative_medications': (context) => const AlternativeMedicationsScreen(),
         '/account_type': (context) => const AccountTypeScreen(),
       },
