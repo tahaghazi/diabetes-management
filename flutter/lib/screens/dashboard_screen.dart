@@ -1052,7 +1052,7 @@ class DashboardGrid extends StatelessWidget {
           'screen': const RemindersScreen(),
         },
         {
-          'title': 'التنبؤ بمرض السكري',
+          'title': 'التنبؤ بمرض السكر',
           'imagePath': 'assets/images/ai_analysis.png.webp',
           'screen': const AIAnalysisScreen(),
         },
