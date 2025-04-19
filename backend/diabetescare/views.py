@@ -91,3 +91,29 @@ def predict_diabetes(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+from . import alternative_medicine
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def alternative_medicines(request):
+    try:
+        data = json.loads(request.body)
+        
+        if 'drug_name' not in data:
+            return Response({"error": "Missing required field: drug_name"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        drug_name = data['drug_name']
+        if not isinstance(drug_name, str):
+            return Response({"error": "drug_name must be a string"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        result = alternative_medicine.recommend_info(drug_name)
+        
+        return Response(result, status=status.HTTP_200_OK)
+    
+    except json.JSONDecodeError:
+        return Response({"error": "Invalid JSON format in request body"}, status=status.HTTP_400_BAD_REQUEST)
+    except alternative_medicine.FileNotFoundError as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
