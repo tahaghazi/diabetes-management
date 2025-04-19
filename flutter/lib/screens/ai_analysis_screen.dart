@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diabetes_management/config/theme.dart';
 
 class AIAnalysisScreen extends StatefulWidget {
@@ -51,6 +54,11 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
     }
   }
 
+  Future<String?> _getAuthToken() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('access_token');
+  }
+
   Future<void> _submitForm() async {
     if (_selectedGender == null) {
       _showSnackBar('يرجى اختيار الجنس أولاً!', Colors.red);
@@ -65,18 +73,73 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
       });
 
       try {
-        final glucose = double.tryParse(_controllers['Glucose']!.text.replaceAll(',', '.')) ?? 0;
-        await Future.delayed(const Duration(seconds: 1));
+        // Prepare data for the API
+        final data = {
+          'Pregnancies': _selectedGender == 'Male' ? '0' : _controllers['Pregnancies']!.text,
+          'Glucose': _controllers['Glucose']!.text.replaceAll(',', '.'),
+          'BloodPressure': _controllers['BloodPressure']!.text.replaceAll(',', '.'),
+          'SkinThickness': _controllers['SkinThickness']!.text.isEmpty
+              ? '0'
+              : _controllers['SkinThickness']!.text.replaceAll(',', '.'),
+          'Insulin': _controllers['Insulin']!.text.isEmpty
+              ? '0'
+              : _controllers['Insulin']!.text.replaceAll(',', '.'),
+          'BMI': _controllers['BMI']!.text.replaceAll(',', '.'),
+          'DiabetesPedigreeFunction': _controllers['DiabetesPedigreeFunction']!.text.replaceAll(',', '.'),
+          'Age': _controllers['Age']!.text.replaceAll(',', '.'),
+        };
 
-        setState(() {
-          _result = glucose > 120 ? 'إيجابي' : 'سلبي';
-        });
-        _showSnackBar('تم التنبؤ بنجاح!', Colors.green);
+        // Print the data being sent for debugging
+        print('Data being sent: $data');
+
+        // Get the auth token
+        final String? authToken = await _getAuthToken();
+        if (authToken == null) {
+          throw Exception('يرجى تسجيل الدخول أولاً');
+        }
+
+        // Make API request
+        final response = await http.post(
+          Uri.parse('http://10.0.2.2:8000/api/predict/'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $authToken',
+          },
+          body: jsonEncode(data),
+        );
+
+        // Print the response details for debugging
+        print('Response status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final result = jsonDecode(response.body);
+          String prediction = result['prediction'] ?? 'غير معروف';
+          
+          // Convert English prediction to Arabic if needed
+          if (prediction.toLowerCase() == 'positive') {
+            prediction = 'إيجابي';
+          } else if (prediction.toLowerCase() == 'negative') {
+            prediction = 'سلبي';
+          }
+
+          setState(() {
+            _result = prediction;
+          });
+          _showSnackBar('تم التنبؤ بنجاح!', Colors.green);
+        } else if (response.statusCode == 401) {
+          throw Exception('فشل المصادقة: التوكن غير صالح. يرجى تسجيل الدخول مرة أخرى');
+        } else {
+          final error = jsonDecode(response.body)['error'] ?? 'حدث خطأ غير معروف';
+          throw Exception(error);
+        }
       } catch (e) {
+        // Print the error for debugging
+        print('Error: $e');
         setState(() {
-          _error = 'فشل في التنبؤ: $e';
+          _error = e.toString();
         });
-        _showSnackBar('فشل في التنبؤ: $e', Colors.red);
+        _showSnackBar(e.toString(), Colors.red);
       } finally {
         setState(() {
           _isLoading = false;
