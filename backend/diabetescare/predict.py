@@ -8,12 +8,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Load the trained model and scaler
 try:
-    with open(os.path.join(BASE_DIR, "models", "diabetes.pkl"), "rb") as file:
+    with open(os.path.join(BASE_DIR, "models", "diabetes_prediction", "diabetes.pkl"), "rb") as file:
         model = pickle.load(file)
-    with open(os.path.join(BASE_DIR, "models", "scaler.pkl"), "rb") as file:
+    with open(os.path.join(BASE_DIR, "models", "diabetes_prediction", "scaler.pkl"), "rb") as file:
         scaler = pickle.load(file)
 except FileNotFoundError:
-    raise FileNotFoundError("Model or scaler file not found. Ensure 'diabetes.pkl' and 'scaler.pkl' are in the 'models' directory.")
+    raise FileNotFoundError("Model or scaler file not found. Ensure 'diabetes.pkl' and 'scaler.pkl' are in the 'models/diabetes_prediction' directory.")
 
 # Define the feature columns (same as in training)
 numerical_cols = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 
