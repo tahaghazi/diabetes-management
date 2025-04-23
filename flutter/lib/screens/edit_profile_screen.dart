@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/config/theme.dart';
+import 'package:diabetes_management/services/user_provider.dart'; // الـ import الجديد
+import 'package:provider/provider.dart'; // أضفنا import لـ provider
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,7 +18,6 @@ class EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _specializationController = TextEditingController();
-  final TextEditingController _medicalHistoryController = TextEditingController();
   String? _accountType;
   bool _isLoading = false;
   Map<String, dynamic>? _linkedDoctor;
@@ -38,7 +39,6 @@ class EditProfileScreenState extends State<EditProfileScreen> {
         _firstNameController.text = prefs.getString('first_name') ?? '';
         _lastNameController.text = prefs.getString('last_name') ?? '';
         _specializationController.text = prefs.getString('specialization') ?? '';
-        _medicalHistoryController.text = prefs.getString('medical_history') ?? '';
         _accountType = prefs.getString('account_type');
       });
 
@@ -173,8 +173,6 @@ class EditProfileScreenState extends State<EditProfileScreen> {
 
       if (_accountType == 'doctor') {
         requestBody['specialization'] = _specializationController.text.trim();
-      } else if (_accountType == 'patient') {
-        requestBody['medical_history'] = _medicalHistoryController.text.trim();
       }
 
       var response = await HttpService().makeRequest(
@@ -183,7 +181,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: requestBody,
+        body: jsonEncode(requestBody),
       );
 
       if (!mounted) return;
@@ -197,13 +195,21 @@ class EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       if (response.statusCode == 200) {
+        // حفظ البيانات في SharedPreferences
         await prefs.setString('first_name', _firstNameController.text.trim());
         await prefs.setString('last_name', _lastNameController.text.trim());
         if (_accountType == 'doctor') {
           await prefs.setString('specialization', _specializationController.text.trim());
-        } else if (_accountType == 'patient') {
-          await prefs.setString('medical_history', _medicalHistoryController.text.trim());
         }
+
+        // تحديث UserProvider
+        Provider.of<UserProvider>(context, listen: false).updateUser(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          accountType: _accountType,
+          specialization: _accountType == 'doctor' ? _specializationController.text.trim() : null,
+          email: prefs.getString('user_email'), // الحفاظ على الإيميل من SharedPreferences
+        );
 
         _showSnackBar('تم تحديث البيانات بنجاح!', Colors.green);
         if (mounted) {
@@ -302,6 +308,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                 filled: true,
                                 fillColor: Colors.teal.shade50,
                                 prefixIcon: Icon(Icons.person_outline, color: Colors.teal),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                               ),
                               style: Theme.of(context).textTheme.bodyLarge,
                               validator: (value) {
@@ -339,6 +346,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                 filled: true,
                                 fillColor: Colors.teal.shade50,
                                 prefixIcon: Icon(Icons.person_outline, color: Colors.teal),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                               ),
                               style: Theme.of(context).textTheme.bodyLarge,
                               validator: (value) {
@@ -377,6 +385,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                   filled: true,
                                   fillColor: Colors.teal.shade50,
                                   prefixIcon: Icon(Icons.medical_services, color: Colors.teal),
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                                 ),
                                 style: Theme.of(context).textTheme.bodyLarge,
                                 validator: (value) {
@@ -396,43 +405,8 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                 },
                               ),
                             ),
-                          // السجل الصحي والدكتور المرتبط (للمريض)
+                          // الدكتور المرتبط (للمريض)
                           if (_accountType == 'patient') ...[
-                            Card(
-                              elevation: 4,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: TextFormField(
-                                controller: _medicalHistoryController,
-                                decoration: InputDecoration(
-                                  labelText: 'السجل الصحي',
-                                  labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.teal.shade700,
-                                      ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.teal.shade50,
-                                  prefixIcon: Icon(Icons.history, color: Colors.teal),
-                                ),
-                                style: Theme.of(context).textTheme.bodyLarge,
-                                maxLines: 3,
-                                validator: (value) {
-                                    if (value != null && value.isNotEmpty) {
-                                        if (!RegExp(r'^[\p{L}\s\d\u0660-\u0669:\/\-\.,]*$', unicode: true).hasMatch(value)) {
-                                            return 'السجل الصحي يحتوي على رموز غير مسموح بها';
-                                        }
-                                        if (value.trim().isEmpty) {
-                                            return 'السجل الصحي لا يمكن أن يكون مسافات فقط';
-                                        }
-                                    }
-                                    return null;
-                                },
-                               ),
-                            ),
                             const SizedBox(height: 16),
                             // كارد الدكتور المرتبط
                             Card(
@@ -591,7 +565,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                   ),
-                ),  
+                ),
         ),
       ),
     );

@@ -165,7 +165,8 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool enabled = true}) {
+  Widget _buildTextField(String label, TextEditingController controller, 
+      {bool enabled = true, List<TextInputFormatter>? inputFormatters}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: TextFormField(
@@ -174,8 +175,8 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textDirection: TextDirection.rtl,
         style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+        inputFormatters: inputFormatters ?? [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
         ],
         decoration: InputDecoration(
           labelText: label,
@@ -197,7 +198,17 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
           if (value == null || value.isEmpty) {
             return 'يرجى إدخال $label';
           }
-          final parsedValue = double.tryParse(value.replaceAll(',', '.'));
+          final cleanedValue = value.replaceAll(',', '.');
+          if (inputFormatters?.contains(FilteringTextInputFormatter.digitsOnly) ?? false) {
+            if (!RegExp(r'^\d+$').hasMatch(cleanedValue)) {
+              return 'يرجى إدخال رقم صحيح (مثال: 2)';
+            }
+          } else {
+            if (!RegExp(r'^\d*\.?\d*$').hasMatch(cleanedValue)) {
+              return 'يرجى إدخال رقم صالح (مثال: 1.5)';
+            }
+          }
+          final parsedValue = double.tryParse(cleanedValue);
           if (parsedValue == null) {
             return 'يرجى إدخال رقم صالح (مثال: 1.5)';
           }
@@ -353,7 +364,8 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
                           ),
                           const SizedBox(height: 20),
                           if (_selectedGender == 'Female')
-                            _buildTextField('عدد مرات الحمل', _controllers['Pregnancies']!),
+                            _buildTextField('عدد مرات الحمل', _controllers['Pregnancies']!, 
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                           _buildTextField('مستوى الجلوكوز', _controllers['Glucose']!),
                           _buildTextField('ضغط الدم', _controllers['BloodPressure']!),
                           _buildTextField('سمك الجلد', _controllers['SkinThickness']!),
@@ -362,7 +374,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
                           _buildTextField('الوزن (كجم)', _controllers['Weight']!),
                           _buildTextField('مؤشر كتلة الجسم', _controllers['BMI']!, enabled: false),
                           _buildTextField(
-                              'عدد أفراد العائلة المصابين بالسكر', _controllers['DiabetesPedigreeFunction']!),
+                              'مؤشر نسبة المصابين بالسكر في العائلة', _controllers['DiabetesPedigreeFunction']!),
                           _buildTextField('العمر', _controllers['Age']!),
                           const SizedBox(height: 20),
                           ElevatedButton(
@@ -392,14 +404,16 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
+                                color: _result == 'إيجابي'
+                                    ? Colors.red.withOpacity(0.1)
+                                    : Colors.green.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 'النتيجة: $_result',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
-                                  color: Colors.green,
+                                  color: _result == 'إيجابي' ? Colors.red : Colors.green,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Cairo',
                                 ),

@@ -20,7 +20,6 @@ class LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
 
   final String _apiUrl = 'http://10.0.2.2:8000/api/login/';
-  //final String _apiUrl = 'http://127.0.0.1:8000//api/login/';
 
   @override
   void initState() {
@@ -121,13 +120,24 @@ class LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => DashboardScreen()),
           );
         }
-      } else if (response.statusCode == 401) {
-        _showSnackBar(
-            data['error'] ?? 'كلمة المرور أو البريد الإلكتروني غير صحيحة',
-            Colors.red);
       } else if (response.statusCode == 400) {
-        _showSnackBar(
-            data['error'] ?? 'حدث خطأ أثناء تسجيل الدخول', Colors.red);
+        // التحقق من تفاصيل الخطأ (الخطأ يأتي كقائمة)
+        var error = data['error'];
+        if (error is List && error.isNotEmpty) {
+          String errorMessage = error[0].toString().toLowerCase();
+          // التحقق مما إذا كانت الرسالة تحتوي على "email" و"password" معًا
+          if (errorMessage.contains('invalid email or password')) {
+            _showSnackBar('البريد الإلكتروني أو كلمة المرور غير صحيحة', Colors.red);
+          } else if (errorMessage.contains('email')) {
+            _showSnackBar('تأكد من إدخال بريدك الإلكتروني بشكل صحيح', Colors.red);
+          } else if (errorMessage.contains('password')) {
+            _showSnackBar('كلمة المرور غير صحيحة', Colors.red);
+          } else {
+            _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
+          }
+        } else {
+          _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
+        }
       } else if (response.statusCode == 500) {
         _showSnackBar('حدث خطأ في الخادم، حاول لاحقًا', Colors.red);
       } else {
@@ -162,12 +172,11 @@ class LoginScreenState extends State<LoginScreen> {
       child: Scaffold(
         body: Stack(
           children: [
-            
             Positioned.fill(
               child: Opacity(
-                opacity: 0.1,    
+                opacity: 0.1,
                 child: Image.asset(
-                  'assets/images/logo_background.png.webp', 
+                  'assets/images/logo_background.png.webp',
                   fit: BoxFit.cover,
                 ),
               ),
@@ -198,23 +207,22 @@ class LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: 'البريد الإلكتروني',
                               prefixIcon: const Icon(Icons.email),
-                              filled: true, 
-                              fillColor: Colors.white,   
+                              filled: true,
+                              fillColor: Colors.white,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8), 
+                                borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.black, width: 1), 
+                                    color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.black, width: 1), 
+                                    color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.black,
-                                    width: 1.5), // خط أسمك لما يكون متفعل
+                                    color: Colors.black, width: 1.5),
                               ),
                             ),
                             textDirection: TextDirection.rtl,
@@ -238,23 +246,22 @@ class LoginScreenState extends State<LoginScreen> {
                                   });
                                 },
                               ),
-                              filled: true, // تفعيل الخلفية
-                              fillColor: Colors.white, // خلفية بيضاء
+                              filled: true,
+                              fillColor: Colors.white,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8), // زوايا دائرية خفيفة
+                                borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.black, width: 1), // خط أسود رفيع
+                                    color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.black, width: 1), // نفس الخط لما يكون مش متفعل
+                                    color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(
-                                    color: Colors.black,
-                                    width: 1.5), // خط أسمك لما يكون متفعل
+                                    color: Colors.black, width: 1.5),
                               ),
                             ),
                             textDirection: TextDirection.rtl,

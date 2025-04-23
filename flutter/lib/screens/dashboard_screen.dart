@@ -1,6 +1,5 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'glucose_tracking_screen.dart';
@@ -13,6 +12,9 @@ import 'patient_monitoring_screen.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
 import 'package:diabetes_management/config/theme.dart';
+import 'package:diabetes_management/services/user_provider.dart'; 
+import 'dart:async';
+import 'dart:convert';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,11 +25,6 @@ class DashboardScreen extends StatefulWidget {
 
 class DashboardScreenState extends State<DashboardScreen> {
   bool _showWelcomeMessage = true;
-  String? _firstName;
-  String? _lastName;
-  String? _email;
-  String? _accountType;
-  String? _specialization;
   int _notificationCount = 0;
   int _patientCount = 0;
   Timer? _notificationTimer;
@@ -40,7 +37,8 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    // تحميل البيانات عند بداية الشاشة
+    Provider.of<UserProvider>(context, listen: false).loadUserData();
     _startNotificationPolling();
     _searchController.addListener(() {
       setState(() {});
@@ -61,34 +59,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _loadUserData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _firstName = prefs.getString('first_name') ?? 'غير متوفر';
-      _lastName = prefs.getString('last_name') ?? '';
-      _email = prefs.getString('user_email') ?? 'غير متوفر';
-      _accountType = prefs.getString('account_type');
-      _specialization = prefs.getString('specialization');
-      debugPrint('Loaded first_name: $_firstName');
-      debugPrint('Loaded last_name: $_lastName');
-      debugPrint('Loaded email: $_email');
-      debugPrint('Loaded account_type: $_accountType');
-      debugPrint('Loaded specialization: $_specialization');
-    });
-
-    String? accessToken = prefs.getString('access_token');
-    String? refreshToken = prefs.getString('refresh_token');
-    if (accessToken != null && refreshToken != null) {
-      HttpService().setTokens(accessToken, refreshToken);
-      debugPrint('Tokens updated in HttpService: Access Token: $accessToken, Refresh Token: $refreshToken');
-    }
-
-    if (_accountType == 'doctor') {
-      await _fetchPatientCount();
-    }
-  }
-
-  Future<void> _fetchPatientCount() async {
+  Future<void> fetchPatientCount() async {
     debugPrint('Fetching patient count...');
     try {
       final response = await HttpService().makeRequest(
@@ -576,7 +547,8 @@ class DashboardScreenState extends State<DashboardScreen> {
               MaterialPageRoute(builder: (context) => screen!),
             );
             if (title == 'الملف الشخصي' && result == true && mounted) {
-              await _loadUserData();
+              // تحديث البيانات بعد العودة من ProfileScreen
+              Provider.of<UserProvider>(context, listen: false).loadUserData();
             }
           }
         },
@@ -605,7 +577,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               MaterialPageRoute(builder: (context) => screen),
             );
             if (title == 'الملف الشخصي' && result == true && mounted) {
-              await _loadUserData();
+              Provider.of<UserProvider>(context, listen: false).loadUserData();
             }
           },
           child: Padding(
@@ -639,378 +611,386 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDashboardHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          if (_showWelcomeMessage)
-            Text(
-              'مرحبًا بك في تطبيق إدارة مرض السكر',
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
-          if (_accountType == 'doctor')
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.people, color: Colors.teal, size: 30),
-                    const SizedBox(width: 10),
-                    Text(
-                      'عدد المرضى: $_patientCount',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal,
-                          ),
-                    ),
-                  ],
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              if (_showWelcomeMessage)
+                Text(
+                  'مرحبًا بك في تطبيق إدارة مرض السكر',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
                 ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'الصفحة الرئيسية',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
-          ),
-          centerTitle: true,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.appBarGradient,
-            ),
-          ),
-          actions: [
-            Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications),
-                  onPressed: _showAllNotificationsDialog,
-                ),
-                if (_notificationCount > 0)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text(
-                        '$_notificationCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-        drawer: Drawer(
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  decoration: const BoxDecoration(
-                    gradient: AppTheme.appBarGradient,
-                  ),
-                  child: SizedBox(
-                    height: 250,
-                    child: Column(
+              if (userProvider.accountType == 'doctor')
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Image.asset(
-                          _accountType == 'doctor'
-                              ? 'assets/images/doctor_logo.png.webp'
-                              : 'assets/images/patient_logo.png.webp',
-                          height: 90,
-                          width: 90,
-                        ),
-                        const SizedBox(height: 12),
+                        const Icon(Icons.people, color: Colors.teal, size: 30),
+                        const SizedBox(width: 10),
                         Text(
-                          '${_firstName ?? 'الاسم'} ${_lastName ?? ''}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _email ?? 'الإيميل',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 18,
-                          ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _accountType == 'doctor' ? 'دكتور' : 'مريض',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 20,
-                          ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                          'عدد المرضى: $_patientCount',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal,
+                              ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                _buildDrawerItem(
-                  context,
-                  'الملف الشخصي',
-                  Icons.person,
-                  const ProfileScreen(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(
+                'الصفحة الرئيسية',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+              ),
+              centerTitle: true,
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.appBarGradient,
                 ),
-                if (_accountType == 'patient') ...[
-                  _buildDrawerItem(
-                    context,
-                    'تتبع تحليل السكر',
-                    Icons.monitor_heart,
-                    const GlucoseTrackingScreen(),
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    'التذكيرات',
-                    Icons.notifications,
-                    const RemindersScreen(),
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    'التنبؤ بمرض السكري',
-                    Icons.analytics,
-                    const AIAnalysisScreen(),
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    'الأدوية البديلة',
-                    Icons.medical_services,
-                    const AlternativeMedicationsScreen(),
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    'التوعية والإرشادات',
-                    Icons.chat,
-                    const AwarenessScreen(),
-                  ),
-                ],
-                if (_accountType == 'doctor')
-                  _buildDrawerItem(
-                    context,
-                    'متابعة المرضى',
-                    Icons.people,
-                    const PatientMonitoringScreen(),
-                  ),
-                const Divider(),
-                const SizedBox(height: 10),
-                _buildDrawerItem(
-                  context,
-                  'تسجيل الخروج',
-                  Icons.logout,
-                  null,
-                  isLogout: true,
+              ),
+              actions: [
+                Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications),
+                      onPressed: _showAllNotificationsDialog,
+                    ),
+                    if (_notificationCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          child: Text(
+                            '$_notificationCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
-          ),
-        ),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: AppTheme.backgroundGradient,
-          ),
-          child: Column(
-            children: [
-              _buildDashboardHeader(context),
-              if (_accountType == 'patient') ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    textDirection: TextDirection.rtl,
-                    decoration: InputDecoration(
-                      hintText: 'البحث عن الطبيب',
-                      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                      prefixIcon: const Icon(Icons.search, color: Colors.teal),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.teal),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchResults = [];
-                                  _searchError = null;
-                                });
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Color.fromRGBO(255, 255, 255, 0.9),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
+            drawer: Drawer(
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      decoration: const BoxDecoration(
+                        gradient: AppTheme.appBarGradient,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                      child: SizedBox(
+                        height: 250,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              userProvider.accountType == 'doctor'
+                                  ? 'assets/images/doctor_logo.png.webp'
+                                  : 'assets/images/patient_logo.png.webp',
+                              height: 90,
+                              width: 90,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '${userProvider.firstName ?? 'الاسم'} ${userProvider.lastName ?? ''}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              userProvider.email ?? 'الإيميل',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 18,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              userProvider.accountType == 'doctor' ? 'دكتور' : 'مريض',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 20,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    onSubmitted: (value) {
-                      _searchDoctors(value);
-                    },
-                  ),
+                    const SizedBox(height: 10),
+                    _buildDrawerItem(
+                      context,
+                      'الملف الشخصي',
+                      Icons.person,
+                      const ProfileScreen(),
+                    ),
+                    if (userProvider.accountType == 'patient') ...[
+                      _buildDrawerItem(
+                        context,
+                        'تتبع تحليل السكر',
+                        Icons.monitor_heart,
+                        const GlucoseTrackingScreen(),
+                      ),
+                      _buildDrawerItem(
+                        context,
+                        'التذكيرات',
+                        Icons.notifications,
+                        const RemindersScreen(),
+                      ),
+                      _buildDrawerItem(
+                        context,
+                        'التنبؤ بمرض السكري',
+                        Icons.analytics,
+                        const AIAnalysisScreen(),
+                      ),
+                      _buildDrawerItem(
+                        context,
+                        'الأدوية البديلة',
+                        Icons.medical_services,
+                        const AlternativeMedicationsScreen(),
+                      ),
+                      _buildDrawerItem(
+                        context,
+                        'التوعية والإرشادات',
+                        Icons.chat,
+                        const AwarenessScreen(),
+                      ),
+                    ],
+                    if (userProvider.accountType == 'doctor')
+                      _buildDrawerItem(
+                        context,
+                        'متابعة المرضى',
+                        Icons.people,
+                        const PatientMonitoringScreen(),
+                      ),
+                    const Divider(),
+                    const SizedBox(height: 10),
+                    _buildDrawerItem(
+                      context,
+                      'تسجيل الخروج',
+                      Icons.logout,
+                      null,
+                      isLogout: true,
+                    ),
+                  ],
                 ),
-                if (_isSearching)
-                  const Center(child: CircularProgressIndicator()),
-                if (_searchError != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      _searchError!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red),
-                    ),
-                  ),
-                if (_searchResults.isNotEmpty)
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final doctor = _searchResults[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            body: Container(
+              decoration: const BoxDecoration(
+                gradient: AppTheme.backgroundGradient,
+              ),
+              child: Column(
+                children: [
+                  _buildDashboardHeader(context),
+                  if (userProvider.accountType == 'patient') ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        textDirection: TextDirection.rtl,
+                        decoration: InputDecoration(
+                          hintText: 'البحث عن الطبيب',
+                          hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                          prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.teal),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchResults = [];
+                                      _searchError = null;
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Color.fromRGBO(255, 255, 255, 0.9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
                           ),
-                          child: ListTile(
-                            leading: const Icon(Icons.person, color: Colors.teal),
-                            title: Text(
-                              '${doctor['first_name'] ?? 'غير متوفر'} ${doctor['last_name'] ?? ''}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            subtitle: Text(
-                              doctor['specialization'] ?? 'غير محدد',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            trailing: ElevatedButton(
-                              onPressed: () async {
-                                try {
-                                  final response = await HttpService().makeRequest(
-                                    method: 'POST',
-                                    url: Uri.parse('http://10.0.2.2:8000/api/link-to-doctor/'),
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: jsonEncode({'doctor_id': doctor['id']}),
-                                  );
-
-                                  if (response == null) {
-                                    _showSnackBar(
-                                      'فشل الاتصال بالسيرفر',
-                                      Colors.red,
-                                    );
-                                    return;
-                                  }
-
-                                  debugPrint('Link Doctor Response Status: ${response.statusCode}');
-                                  debugPrint('Link Doctor Response Body: ${response.body}');
-
-                                  if (response.statusCode == 201) {
-                                    _showSnackBar(
-                                      'تم طلب استشارة مع الدكتور ${doctor['first_name']} ${doctor['last_name']}',
-                                      Colors.green,
-                                    );
-                                  } else {
-                                    String errorMessage = 'خطأ غير معروف';
-                                    if (response.headers['content-type']?.contains('application/json') == true) {
-                                      try {
-                                        final responseData = jsonDecode(response.body);
-                                        errorMessage = responseData['error'] ?? 'خطأ غير معروف';
-                                      } catch (e) {
-                                        errorMessage = 'فشل تحليل الاستجابة: ${response.body}';
-                                      }
-                                    } else {
-                                      errorMessage = 'استجابة غير متوقعة من السيرفر: ${response.body}';
-                                    }
-                                    _showSnackBar(
-                                      'فشل طلب الاستشارة: $errorMessage',
-                                      Colors.red,
-                                    );
-                                  }
-                                } catch (e) {
-                                  debugPrint('Link Doctor Error: $e');
-                                  _showSnackBar(
-                                    'حدث خطأ: $e',
-                                    Colors.red,
-                                  );
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                        ),
+                        onSubmitted: (value) {
+                          _searchDoctors(value);
+                        },
+                      ),
+                    ),
+                    if (_isSearching)
+                      const Center(child: CircularProgressIndicator()),
+                    if (_searchError != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _searchError!,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red),
+                        ),
+                      ),
+                    if (_searchResults.isNotEmpty)
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final doctor = _searchResults[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: ListTile(
+                                leading: const Icon(Icons.person, color: Colors.teal),
+                                title: Text(
+                                  '${doctor['first_name'] ?? 'غير متوفر'} ${doctor['last_name'] ?? ''}',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                subtitle: Text(
+                                  doctor['specialization'] ?? 'غير محدد',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                trailing: ElevatedButton(
+                                  onPressed: () async {
+                                    try {
+                                      final response = await HttpService().makeRequest(
+                                        method: 'POST',
+                                        url: Uri.parse('http://10.0.2.2:8000/api/link-to-doctor/'),
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: jsonEncode({'doctor_id': doctor['id']}),
+                                      );
+
+                                      if (response == null) {
+                                        _showSnackBar(
+                                          'فشل الاتصال بالسيرفر',
+                                          Colors.red,
+                                        );
+                                        return;
+                                      }
+
+                                      debugPrint('Link Doctor Response Status: ${response.statusCode}');
+                                      debugPrint('Link Doctor Response Body: ${response.body}');
+
+                                      if (response.statusCode == 201) {
+                                        _showSnackBar(
+                                          'تم طلب استشارة مع الدكتور ${doctor['first_name']} ${doctor['last_name']}',
+                                          Colors.green,
+                                        );
+                                      } else {
+                                        String errorMessage = 'خطأ غير معروف';
+                                        if (response.headers['content-type']?.contains('application/json') == true) {
+                                          try {
+                                            final responseData = jsonDecode(response.body);
+                                            errorMessage = responseData['error'] ?? 'خطأ غير معروف';
+                                          } catch (e) {
+                                            errorMessage = 'فشل تحليل الاستجابة: ${response.body}';
+                                          }
+                                        } else {
+                                          errorMessage = 'استجابة غير متوقعة من السيرفر: ${response.body}';
+                                        }
+                                        _showSnackBar(
+                                          'فشل طلب الاستشارة: $errorMessage',
+                                          Colors.red,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      debugPrint('Link Doctor Error: $e');
+                                      _showSnackBar(
+                                        'حدث خطأ: $e',
+                                        Colors.red,
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.teal,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  child: const Text(
+                                    'طلب استشارة',
+                                    style: TextStyle(color: Colors.white, fontSize: 14),
+                                  ),
+                                ),
+                                onTap: () {
+                                  _showSnackBar(
+                                    'تم تحديد الطبيب: ${doctor['first_name']}',
+                                    Colors.green,
+                                  );
+                                },
                               ),
-                              child: const Text(
-                                'طلب استشارة',
-                                style: TextStyle(color: Colors.white, fontSize: 14),
-                              ),
-                            ),
-                            onTap: () {
-                              _showSnackBar(
-                                'تم تحديد الطبيب: ${doctor['first_name']}',
-                                Colors.green,
-                              );
-                            },
-                          ),
-                        );
-                      },
+                            );
+                          },
+                        ),
+                      ),
+                    if (!_isSearching && _searchResults.isEmpty && _searchError == null)
+                      Expanded(
+                        child: DashboardGrid(
+                          buildDashboardButton: _buildDashboardButton,
+                          accountType: userProvider.accountType,
+                        ),
+                      ),
+                  ] else
+                    Expanded(
+                      child: DashboardGrid(
+                        buildDashboardButton: _buildDashboardButton,
+                        accountType: userProvider.accountType,
+                      ),
                     ),
-                  ),
-                if (!_isSearching && _searchResults.isEmpty && _searchError == null)
-                  Expanded(
-                    child: DashboardGrid(
-                      buildDashboardButton: _buildDashboardButton,
-                      accountType: _accountType,
-                    ),
-                  ),
-              ] else
-                Expanded(
-                  child: DashboardGrid(
-                    buildDashboardButton: _buildDashboardButton,
-                    accountType: _accountType,
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
