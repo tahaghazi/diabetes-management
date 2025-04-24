@@ -92,6 +92,8 @@ class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
+        // Combine first_name and last_name into full_name
+        responseData['full_name'] = '${responseData['first_name'] ?? 'غير متوفر'} ${responseData['last_name'] ?? ''}'.trim();
         if (mounted) {
           _showHealthRecordDialog(responseData);
         }
@@ -106,7 +108,7 @@ class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
       setState(() {
         _errorMessage = 'حدث خطأ: $e';
         _isLoading = false;
-      });
+       });
     } finally {
       setState(() {
         _isLoading = false;
@@ -132,13 +134,8 @@ class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
               children: [
                 _buildHealthRecordItem(
                   context,
-                  'الاسم الأول',
-                  healthRecord['first_name'] ?? 'غير متوفر',
-                ),
-                _buildHealthRecordItem(
-                  context,
-                  'الاسم الأخير',
-                  healthRecord['last_name'] ?? 'غير متوفر',
+                  'الاسم الكامل',
+                  healthRecord['full_name'] ?? 'غير متوفر',
                 ),
                 _buildHealthRecordItem(
                   context,
@@ -148,7 +145,7 @@ class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
                 _buildHealthRecordItem(
                   context,
                   'التاريخ المرضي',
-                  healthRecord['medical_history'] ?? 'لا يوجد تاريخ مرضي',
+                  healthRecord['medical_history'] ?? 'لا يوجد تاريخ مرضي', // Assumes medical_history is in Arabic from API
                 ),
               ],
             ),

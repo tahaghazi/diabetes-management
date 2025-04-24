@@ -405,10 +405,10 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                 },
                               ),
                             ),
-                          // الدكتور المرتبط (للمريض)
+                          // الدكتور المعالج (للمريض)
                           if (_accountType == 'patient') ...[
                             const SizedBox(height: 16),
-                            // كارد الدكتور المرتبط
+                            // كارد الدكتور المعالج
                             Card(
                               elevation: 6,
                               shape: RoundedRectangleBorder(
@@ -420,7 +420,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'الدكتور المرتبط',
+                                      'الدكتور المعالج',
                                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                             color: Colors.teal.shade800,
                                             fontWeight: FontWeight.bold,
@@ -490,7 +490,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
                                             ],
                                           )
                                         : Text(
-                                            'لا يوجد دكتور مرتبط',
+                                            'لا يوجد دكتور معالج',
                                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                                   color: Colors.grey[600],
                                                   fontStyle: FontStyle.italic,

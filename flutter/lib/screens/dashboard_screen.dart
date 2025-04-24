@@ -12,7 +12,7 @@ import 'patient_monitoring_screen.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
 import 'package:diabetes_management/config/theme.dart';
-import 'package:diabetes_management/services/user_provider.dart'; 
+import 'package:diabetes_management/services/user_provider.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -27,6 +27,8 @@ class DashboardScreenState extends State<DashboardScreen> {
   bool _showWelcomeMessage = true;
   int _notificationCount = 0;
   int _patientCount = 0;
+  bool _isLoadingPatientCount = false;
+  String? _patientCountError;
   Timer? _notificationTimer;
   List<Map<String, dynamic>> _lastNotifications = [];
   final TextEditingController _searchController = TextEditingController();
@@ -43,6 +45,8 @@ class DashboardScreenState extends State<DashboardScreen> {
     _searchController.addListener(() {
       setState(() {});
     });
+    // استدعاء جلب عدد المرضى
+    fetchPatientCount();
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
@@ -61,6 +65,10 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> fetchPatientCount() async {
     debugPrint('Fetching patient count...');
+    setState(() {
+      _isLoadingPatientCount = true;
+      _patientCountError = null;
+    });
     try {
       final response = await HttpService().makeRequest(
         method: 'GET',
@@ -69,6 +77,9 @@ class DashboardScreenState extends State<DashboardScreen> {
       );
 
       if (response == null) {
+        setState(() {
+          _patientCountError = 'فشل الاتصال بالسيرفر';
+        });
         debugPrint('Fetch Patient Count: Null response received');
         return;
       }
@@ -79,19 +90,39 @@ class DashboardScreenState extends State<DashboardScreen> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
         debugPrint('Parsed Patient Count Data: $responseData');
+        int patientCount = 0;
         if (responseData is List) {
-          setState(() {
-            _patientCount = responseData.length;
-            debugPrint('Updated patient count: $_patientCount');
-          });
+          patientCount = responseData.length;
+        } else if (responseData is Map && responseData.containsKey('patients')) {
+          patientCount = (responseData['patients'] as List).length;
+        } else if (responseData is Map && responseData.containsKey('data')) {
+          patientCount = (responseData['data'] as List).length;
         } else {
+          setState(() {
+            _patientCountError = 'تنسيق استجابة غير متوقع';
+          });
           debugPrint('Unexpected response format: $responseData');
+          return;
         }
+        setState(() {
+          _patientCount = patientCount;
+          debugPrint('Updated patient count: $_patientCount');
+        });
       } else {
+        setState(() {
+          _patientCountError = 'فشل جلب البيانات: ${response.statusCode}';
+        });
         debugPrint('Fetch Patient Count Failed: Status ${response.statusCode}');
       }
     } catch (e) {
+      setState(() {
+        _patientCountError = 'حدث خطأ: $e';
+      });
       debugPrint('Fetch Patient Count Error: $e');
+    } finally {
+      setState(() {
+        _isLoadingPatientCount = false;
+      });
     }
   }
 
@@ -634,13 +665,22 @@ class DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         const Icon(Icons.people, color: Colors.teal, size: 30),
                         const SizedBox(width: 10),
-                        Text(
-                          'عدد المرضى: $_patientCount',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.teal,
-                              ),
-                        ),
+                        _isLoadingPatientCount
+                            ? const CircularProgressIndicator()
+                            : _patientCountError != null
+                                ? Text(
+                                    _patientCountError!,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.red,
+                                        ),
+                                  )
+                                : Text(
+                                    'عدد المرضى: $_patientCount',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.teal,
+                                        ),
+                                  ),
                       ],
                     ),
                   ),
@@ -771,7 +811,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     if (userProvider.accountType == 'patient') ...[
                       _buildDrawerItem(
                         context,
-                        'تتبع تحليل السكر',
+                        'تتبع مستوي السكر',
                         Icons.monitor_heart,
                         const GlucoseTrackingScreen(),
                       ),
@@ -1022,7 +1062,7 @@ class DashboardGrid extends StatelessWidget {
     if (accountType == 'patient') {
       items.insertAll(0, [
         {
-          'title': 'تتبع تحليل السكر',
+          'title': 'تتبع مستوي السكر',
           'imagePath': 'assets/images/glucose_tracking.png.webp',
           'screen': const GlucoseTrackingScreen(),
         },
