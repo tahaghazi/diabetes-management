@@ -3,8 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'edit_profile_screen.dart';
 import 'package:diabetes_management/config/theme.dart';
 import 'package:diabetes_management/services/http_service.dart';
-import 'package:diabetes_management/services/user_provider.dart'; // الـ import الجديد
-import 'package:provider/provider.dart'; // الـ import لـ provider
+import 'package:diabetes_management/services/user_provider.dart';
+import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../main.dart';
 import 'package:intl/intl.dart';
@@ -105,7 +105,6 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(utf8.decode(response.bodyBytes));
-        // تحديث UserProvider
         Provider.of<UserProvider>(context, listen: false).updateUser(
           email: responseData['email'],
           firstName: responseData['first_name'],
@@ -118,7 +117,6 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
           specialization: responseData.containsKey('specialization') ? responseData['specialization'] ?? 'غير محدد' : null,
         );
 
-        // حفظ البيانات في SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('first_name', responseData['first_name'] ?? '');
         await prefs.setString('last_name', responseData['last_name'] ?? '');
@@ -349,33 +347,45 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                   const SizedBox(height: 16),
                                   if (userProvider.accountType == 'patient')
                                     _linkedDoctor != null
-                                        ? Column(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'الدكتور المرتبط',
-                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                      color: Colors.teal.shade800,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                '${_linkedDoctor!['first_name'] ?? 'غير متوفر'} ${_linkedDoctor!['last_name'] ?? ''}',
-                                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                                      color: Colors.black87,
-                                                    ),
-                                              ),
-                                              Text(
-                                                'التخصص: ${_linkedDoctor!['specialization'] ?? 'غير محدد'}',
-                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                      color: Colors.grey[600],
-                                                    ),
-                                              ),
-                                            ],
+                                        ? Container(
+                                            constraints: BoxConstraints(
+                                              minWidth: 300, // عرض أكبر ليبدو مستطيلًا
+                                              maxWidth: MediaQuery.of(context).size.width * 0.8,
+                                            ),
+                                            padding: const EdgeInsets.all(12.0),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: Colors.teal, width: 2),
+                                              borderRadius: BorderRadius.circular(12),
+                                              color: Colors.teal.shade50,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'الدكتور المعالج',
+                                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                        color: Colors.teal.shade800,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  '${_linkedDoctor!['first_name'] ?? 'غير متوفر'} ${_linkedDoctor!['last_name'] ?? ''}',
+                                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                        color: Colors.black87,
+                                                      ),
+                                                ),
+                                                Text(
+                                                  'التخصص: ${_linkedDoctor!['specialization'] ?? 'غير محدد'}',
+                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
                                           )
                                         : Text(
-                                            'لا يوجد دكتور مرتبط',
+                                            'لا يوجد دكتور معالج',
                                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                   color: Colors.grey[600],
                                                   fontStyle: FontStyle.italic,

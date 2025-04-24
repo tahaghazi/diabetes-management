@@ -121,15 +121,11 @@ class LoginScreenState extends State<LoginScreen> {
           );
         }
       } else if (response.statusCode == 400) {
-        // التحقق من تفاصيل الخطأ (الخطأ يأتي كقائمة)
         var error = data['error'];
         if (error is List && error.isNotEmpty) {
           String errorMessage = error[0].toString().toLowerCase();
-          // التحقق مما إذا كانت الرسالة تحتوي على "email" و"password" معًا
-          if (errorMessage.contains('invalid email or password')) {
-            _showSnackBar('البريد الإلكتروني أو كلمة المرور غير صحيحة', Colors.red);
-          } else if (errorMessage.contains('email')) {
-            _showSnackBar('تأكد من إدخال بريدك الإلكتروني بشكل صحيح', Colors.red);
+          if (errorMessage.contains('invalid email') || errorMessage.contains('user not found')) {
+            _showSnackBar('هذا الحساب غير موجود، من فضلك أنشئ حسابًا', Colors.red);
           } else if (errorMessage.contains('password')) {
             _showSnackBar('كلمة المرور غير صحيحة', Colors.red);
           } else {
