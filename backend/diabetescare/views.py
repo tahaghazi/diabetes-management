@@ -117,3 +117,30 @@ def alternative_medicines(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def drug_suggestions(request):
+    try:
+        data = json.loads(request.body)
+        
+        if 'query' not in data:
+            return Response({"error": "Missing required field: query"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        query = data['query']
+        if not isinstance(query, str):
+            return Response({"error": "query must be a string"}, status=status.HTTP_400_BAD_REQUEST)
+    
+        drug_names = alternative_medicine.new_data['Drug Name'].tolist()
+        
+        suggestions = [
+            drug for drug in drug_names
+            if drug.lower().startswith(query.lower())
+        ]
+        
+        return Response(suggestions, status=status.HTTP_200_OK)
+    
+    except json.JSONDecodeError:
+        return Response({"error": "Invalid JSON format in request body"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
