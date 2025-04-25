@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:diabetes_management/config/theme.dart';
-import 'package:diabetes_management/services/http_service.dart'; 
+import 'package:diabetes_management/services/http_service.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'dart:convert';
 
 class AlternativeMedicationsScreen extends StatefulWidget {
@@ -19,7 +20,34 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
 
   // Instance of HttpService
   final HttpService httpService = HttpService();
-  final String baseUrl = "http://10.0.2.2:8000/api"; // Adjust if needed
+  final String baseUrl = "http://10.0.2.2:8000/api"; // Already updated by you
+
+  // Fetch drug suggestions for Autocomplete
+  Future<List<String>> _getDrugSuggestions(String query) async {
+    try {
+      final response = await httpService.makeRequest(
+        method: 'POST',
+        url: Uri.parse('$baseUrl/drug-suggestions/'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: {'query': query},
+      );
+
+      if (response == null) {
+        throw Exception('فشل في الاتصال: الرجاء تسجيل الدخول مرة أخرى');
+      }
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.cast<String>();
+      } else {
+        throw Exception('فشل في جلب اقتراحات الأدوية: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('خطأ في جلب اقتراحات الأدوية: $e');
+    }
+  }
 
   // Fetch alternative medications from the API using HttpService
   Future<void> _searchMedication(String drugName) async {
@@ -133,16 +161,31 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'أدخل اسم الدواء الأساسي...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
+                    child: TypeAheadField<String>(
+                      textFieldConfiguration: TextFieldConfiguration(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'أدخل اسم الدواء الأساسي...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
                         ),
-                        filled: true,
-                        fillColor: Colors.white,
                       ),
+                      suggestionsCallback: (pattern) async {
+                        if (pattern.isEmpty) return [];
+                        return await _getDrugSuggestions(pattern);
+                      },
+                      itemBuilder: (context, suggestion) {
+                        return ListTile(
+                          title: Text(suggestion),
+                        );
+                      },
+                      onSuggestionSelected: (suggestion) {
+                        _searchController.text = suggestion;
+                        _searchMedication(suggestion);
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
