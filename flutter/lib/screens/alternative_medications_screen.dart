@@ -20,7 +20,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
 
   // Instance of HttpService
   final HttpService httpService = HttpService();
-  final String baseUrl = "http://10.0.2.2:8000/api"; // Already updated by you
+  final String baseUrl = "http://10.0.2.2:8000/api";
 
   // Fetch drug suggestions for Autocomplete
   Future<List<String>> _getDrugSuggestions(String query) async {
@@ -93,27 +93,29 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
             showAlternativeText = true;
           });
 
-          // Show warning SnackBar
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: const [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.yellow,
-                    size: 30,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'يرجى اتباع تعليمات الدكتور وإعلامه بالدواء',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ],
+          // Check if the widget is still mounted before using BuildContext
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: const [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.yellow,
+                      size: 30,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'يرجى اتباع تعليمات الدكتور وإعلامه بالدواء',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.redAccent,
+                duration: const Duration(seconds: 7),
               ),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 7),
-            ),
-          );
+            );
+          }
         }
       } else {
         setState(() {
@@ -162,17 +164,21 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                 children: [
                   Expanded(
                     child: TypeAheadField<String>(
-                      textFieldConfiguration: TextFieldConfiguration(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'أدخل اسم الدواء الأساسي...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                      controller: _searchController,
+                      builder: (context, controller, focusNode) {
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            hintText: 'أدخل اسم الدواء الأساسي...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      ),
+                        );
+                      },
                       suggestionsCallback: (pattern) async {
                         if (pattern.isEmpty) return [];
                         return await _getDrugSuggestions(pattern);
@@ -182,7 +188,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                           title: Text(suggestion),
                         );
                       },
-                      onSuggestionSelected: (suggestion) {
+                      onSelected: (suggestion) {
                         _searchController.text = suggestion;
                         _searchMedication(suggestion);
                       },
@@ -216,7 +222,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                     style: const TextStyle(color: Colors.red, fontSize: 16),
                   ),
                 ),
-              if (!isLoading && errorMessage == null && showAlternativeText) ...[
+              if (showAlternativeText && filteredMedications.isNotEmpty) ...[
                 const Padding(
                   padding: EdgeInsets.only(bottom: 10.0),
                   child: Text(
@@ -244,102 +250,122 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                 const SizedBox(height: 10),
               ],
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      dividerThickness: 2.0,
-                      dataRowMinHeight: 60,
-                      dataRowMaxHeight: 60,
-                      columnSpacing: 20,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      border: TableBorder(
-                        verticalInside: const BorderSide(
-                          width: 2.0,
-                          color: Colors.grey,
-                        ),
-                        horizontalInside: const BorderSide(
-                          width: 2.0,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      columns: const [
-                        DataColumn(
-                          label: ColoredBox(
-                            color: Colors.teal,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                              child: Text(
-                                'اسم الدواء',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                child: showAlternativeText && filteredMedications.isNotEmpty
+                    ? SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          child: DataTable(
+                            dividerThickness: 2.0,
+                            dataRowMinHeight: 60,
+                            dataRowMaxHeight: 60,
+                            columnSpacing: 20,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                            ),
+                            border: TableBorder(
+                              verticalInside: const BorderSide(
+                                width: 2.0,
+                                color: Colors.grey,
+                              ),
+                              horizontalInside: const BorderSide(
+                                width: 2.0,
+                                color: Colors.grey,
                               ),
                             ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: ColoredBox(
-                            color: Colors.teal,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                              child: Text(
-                                'الوصف',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                            columns: const [
+                              DataColumn(
+                                label: ColoredBox(
+                                  color: Colors.teal,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    child: Text(
+                                      'الرقم',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: ColoredBox(
-                            color: Colors.teal,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                              child: Text(
-                                'الأثر الجانبي',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                              DataColumn(
+                                label: ColoredBox(
+                                  color: Colors.teal,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    child: Text(
+                                      'اسم الدواء',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: ColoredBox(
-                            color: Colors.teal,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                              child: Text(
-                                'طريقة الاستخدام',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                              DataColumn(
+                                label: ColoredBox(
+                                  color: Colors.teal,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    child: Text(
+                                      'الوصف',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              DataColumn(
+                                label: ColoredBox(
+                                  color: Colors.teal,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    child: Text(
+                                      'الأثر الجانبي',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              DataColumn(
+                                label: ColoredBox(
+                                  color: Colors.teal,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                    child: Text(
+                                      'طريقة الاستخدام',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            rows: filteredMedications.asMap().entries.map((entry) {
+                              int index = entry.key + 1; // الترقيم يبدأ من 1
+                              Map<String, String> med = entry.value;
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text('$index')), // عمود الترقيم
+                                  DataCell(Text(med['name']!)),
+                                  DataCell(Text(med['description']!)),
+                                  DataCell(Text(med['sideEffect']!)),
+                                  DataCell(Text(med['howToUse']!)),
+                                ],
+                              );
+                            }).toList(),
                           ),
                         ),
-                      ],
-                      rows: filteredMedications.map((med) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(med['name']!)),
-                            DataCell(Text(med['description']!)),
-                            DataCell(Text(med['sideEffect']!)),
-                            DataCell(Text(med['howToUse']!)),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
