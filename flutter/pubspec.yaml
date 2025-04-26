@@ -24,12 +24,12 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   provider: ^6.1.4
   flutter_typeahead: ^5.2.0
-
+  translator: ^1.0.3+1
 
 
 dependency_overrides:
   flutter_keyboard_visibility: ^6.0.0
-  
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
