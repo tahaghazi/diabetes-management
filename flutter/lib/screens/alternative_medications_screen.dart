@@ -228,22 +228,9 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                   child: Text(
                     'الأدوية البديلة للدواء المدخل',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 25,
                       fontWeight: FontWeight.bold,
                       color: Colors.teal,
-                    ),
-                  ),
-                ),
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: 10.0),
-                    child: Text(
-                      'نتائج البحث عن الأدوية البديلة',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
                     ),
                   ),
                 ),
@@ -254,114 +241,197 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                     ? SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: SingleChildScrollView(
-                          child: DataTable(
-                            dividerThickness: 2.0,
-                            dataRowMinHeight: 60,
-                            dataRowMaxHeight: 60,
-                            columnSpacing: 20,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
+                              color: Colors.cyan[50], // لون الخلفية السماوي الفاتح
+                              borderRadius: BorderRadius.circular(12.0), // زوايا دائرية
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.3), // لون الظل
+                                  spreadRadius: 2,
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3), // اتجاه الظل
+                                ),
+                              ],
                             ),
-                            border: TableBorder(
-                              verticalInside: const BorderSide(
-                                width: 2.0,
-                                color: Colors.grey,
+                            child: DataTable(
+                              dividerThickness: 1.5, // سمك الفواصل
+                              dataRowMinHeight: 50, // ارتفاع الصف
+                              dataRowMaxHeight: 50,
+                              columnSpacing: 15, // التباعد بين الأعمدة
+                              decoration: BoxDecoration(
+                                color: Colors.cyan[50], // لون الخلفية السماوي الفاتح
+                                border: Border.all(color: Colors.grey.shade400), // حدود خارجية
+                                borderRadius: BorderRadius.circular(12.0), // زوايا دائرية
                               ),
-                              horizontalInside: const BorderSide(
-                                width: 2.0,
-                                color: Colors.grey,
+                              border: TableBorder(
+                                verticalInside: BorderSide(
+                                  width: 1.5,
+                                  color: Colors.grey.shade400, // لون الحدود الرأسية
+                                ),
+                                horizontalInside: BorderSide(
+                                  width: 1.5,
+                                  color: Colors.grey.shade400, // لون الحدود الأفقية
+                                ),
                               ),
-                            ),
-                            columns: const [
-                              DataColumn(
-                                label: ColoredBox(
-                                  color: Colors.teal,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                              columns: const [
+                                DataColumn(
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                     child: Text(
                                       'الرقم',
+                                      textAlign: TextAlign.center, // محاذاة النص في المنتصف
                                       style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold, // جعل النص Bold
+                                        color: Colors.black, // لون النص أسود
+                                        fontSize: 16, // زيادة حجم الخط
+                                        letterSpacing: 0.5,
+                                        wordSpacing: 1.0,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              DataColumn(
-                                label: ColoredBox(
-                                  color: Colors.teal,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                DataColumn(
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                     child: Text(
                                       'اسم الدواء',
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                        letterSpacing: 0.5,
+                                        wordSpacing: 1.0,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              DataColumn(
-                                label: ColoredBox(
-                                  color: Colors.teal,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                DataColumn(
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                     child: Text(
                                       'الوصف',
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                        letterSpacing: 0.5,
+                                        wordSpacing: 1.0,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              DataColumn(
-                                label: ColoredBox(
-                                  color: Colors.teal,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                DataColumn(
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                     child: Text(
                                       'الأثر الجانبي',
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                        letterSpacing: 0.5,
+                                        wordSpacing: 1.0,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              DataColumn(
-                                label: ColoredBox(
-                                  color: Colors.teal,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                DataColumn(
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                     child: Text(
                                       'طريقة الاستخدام',
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                        letterSpacing: 0.5,
+                                        wordSpacing: 1.0,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                            rows: filteredMedications.asMap().entries.map((entry) {
-                              int index = entry.key + 1; // الترقيم يبدأ من 1
-                              Map<String, String> med = entry.value;
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text('$index')), // عمود الترقيم
-                                  DataCell(Text(med['name']!)),
-                                  DataCell(Text(med['description']!)),
-                                  DataCell(Text(med['sideEffect']!)),
-                                  DataCell(Text(med['howToUse']!)),
-                                ],
-                              );
-                            }).toList(),
+                              ],
+                              rows: filteredMedications.asMap().entries.map((entry) {
+                                int index = entry.key + 1; // الترقيم يبدأ من 1
+                                Map<String, String> med = entry.value;
+                                return DataRow(
+                                  color: MaterialStateProperty.resolveWith<Color?>(
+                                    (Set<MaterialState> states) {
+                                      // ألوان متناوبة للصفوف
+                                      return index % 2 == 0 ? Colors.white : Colors.cyan[50];
+                                    },
+                                  ),
+                                  cells: [
+                                    DataCell(
+                                      Text(
+                                        '$index',
+                                        textAlign: TextAlign.center, // محاذاة النص في المنتصف
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        med['name']!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color.fromARGB(221, 194, 31, 31),
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        med['description']!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        med['sideEffect']!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        med['howToUse']!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
                           ),
                         ),
                       )
@@ -374,3 +444,4 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
     );
   }
 }
+  
