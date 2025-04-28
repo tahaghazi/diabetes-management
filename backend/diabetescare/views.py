@@ -2,11 +2,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GlucoseTrackingSerializer
-from profiles.models import PatientProfile
-from .models import GlucoseTracking 
+from .serializers import GlucoseTrackingSerializer, AnalysisImageSerializer
+from profiles.models import PatientProfile, DoctorPatientRelation
+from .models import GlucoseTracking, AnalysisImage
 from .import predict
 import json
+import os
+from django.contrib.auth.models import User
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -142,5 +144,109 @@ def drug_suggestions(request):
     
     except json.JSONDecodeError:
         return Response({"error": "Invalid JSON format in request body"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_analysis(request):
+    user = request.user
+
+    try:
+        patient = PatientProfile.objects.get(user=user)
+    except PatientProfile.DoesNotExist:
+        return Response({"error": "Only patients can upload analysis images."}, status=status.HTTP_403_FORBIDDEN)
+
+    if 'image' not in request.FILES:
+        return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    image = request.FILES['image']
+    description = request.POST.get('description', '')
+
+    analysis_image = AnalysisImage.objects.create(
+        patient=patient,
+        image=image,
+        description=description
+    )
+
+    serializer = AnalysisImageSerializer(analysis_image)
+
+    return Response({
+        "message": "Analysis image uploaded successfully!",
+        "data": serializer.data
+    }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_analysis(request):
+    user = request.user
+
+    try:
+        patient = PatientProfile.objects.get(user=user)
+    except PatientProfile.DoesNotExist:
+        return Response({"error": "Only patients can view their analysis."}, status=status.HTTP_403_FORBIDDEN)
+
+    analysis = AnalysisImage.objects.filter(patient=patient).order_by('-uploaded_at')
+    serializer = AnalysisImageSerializer(analysis, many=True)
+
+    return Response({
+        "message": "Your analysis retrieved successfully!",
+        "data": serializer.data
+    }, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_analysis(request, analysis_id):
+    user = request.user
+
+    try:
+        patient = PatientProfile.objects.get(user=user)
+    except PatientProfile.DoesNotExist:
+        return Response({"error": "Only patients can delete their analysis."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        analysis = AnalysisImage.objects.get(id=analysis_id, patient=patient)
+    except AnalysisImage.DoesNotExist:
+        return Response({"error": "Analysis image not found or not owned by you."}, status=status.HTTP_404_NOT_FOUND)
+
+    if analysis.image and os.path.isfile(analysis.image.path):
+        os.remove(analysis.image.path)
+
+    analysis.delete()
+
+    return Response({
+        "message": "Analysis image deleted successfully!"
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_comment_to_analysis(request, analysis_id):
+    user = request.user
+    if not hasattr(user, 'doctorprofile'):
+        return Response({"error": "Only doctors can add comments to analysis."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        analysis = AnalysisImage.objects.get(id=analysis_id)
+        patient = User.objects.get(id=analysis.patient.user.id, patientprofile__isnull=False)
+        if not DoctorPatientRelation.objects.filter(doctor=user, patient=patient).exists():
+            return Response({"error": "This patient is not linked to you."}, status=status.HTTP_403_FORBIDDEN)
+
+        comment = request.data.get('comment')
+        if not comment:
+            return Response({"error": "Comment is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        analysis.comment = comment
+        analysis.save()
+
+        serializer = AnalysisImageSerializer(analysis)
+        return Response({
+            "message": "Comment added successfully!",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except AnalysisImage.DoesNotExist:
+        return Response({"error": "Analysis image not found."}, status=status.HTTP_404_NOT_FOUND)
+    except User.DoesNotExist:
+        return Response({"error": "Patient not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
