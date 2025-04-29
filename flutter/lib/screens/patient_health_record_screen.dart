@@ -4,6 +4,7 @@ import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/config/theme.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'full_image_screen.dart';
 
 class PatientHealthRecordScreen extends StatefulWidget {
@@ -19,6 +20,8 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
   Map<String, dynamic>? _healthRecord;
   String? _errorMessage;
   bool _isLoading = true;
+  String? _token;
+  final HttpService _httpService = HttpService();
 
   @override
   bool get wantKeepAlive => true;
@@ -26,7 +29,35 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
   @override
   void initState() {
     super.initState();
-    _fetchPatientHealthRecord();
+    _loadTokenAndFetchData();
+  }
+
+  Future<void> _loadTokenAndFetchData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? accessToken = prefs.getString('access_token');
+      if (accessToken != null) {
+        setState(() {
+          _token = accessToken;
+        });
+        _httpService.setTokens(accessToken, '');
+        await _fetchPatientHealthRecord();
+      } else {
+        setState(() {
+          _errorMessage = 'لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'فشل تحميل البيانات: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchPatientHealthRecord() async {
@@ -115,6 +146,91 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
       debugPrint('Fetch Patient Analysis Error: $e');
       throw Exception('حدث خطأ أثناء جلب تحاليل المريض: $e');
     }
+  }
+
+  Future<void> _addCommentToAnalysis(int analysisId, String comment) async {
+    if (_token == null) {
+      _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
+      return;
+    }
+
+    try {
+      final response = await _httpService.makeRequest(
+        method: 'POST',
+        url: Uri.parse('http://10.0.2.2:8000/api/add-comment-to-analysis/$analysisId/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'comment': comment}),
+      );
+
+      if (response == null) {
+        _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+        return;
+      }
+
+      debugPrint('Add Comment Response Status: ${response.statusCode}');
+      debugPrint('Add Comment Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        _showSnackBar('تم إضافة التعليق بنجاح!', Colors.green);
+        await _fetchPatientHealthRecord(); // Refresh data to update the table
+      } else {
+        final responseData = jsonDecode(response.body);
+        _showSnackBar(responseData['error'] ?? 'فشل في إضافة التعليق!', Colors.red);
+      }
+    } catch (e) {
+      debugPrint('Add Comment Error: $e');
+      _showSnackBar('فشل في إضافة التعليق: $e', Colors.red);
+    }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Future<void> _showCommentDialog(int analysisId) async {
+    final TextEditingController commentController = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إضافة تعليق'),
+        content: TextField(
+          controller: commentController,
+          decoration: const InputDecoration(
+            labelText: 'اكتب تعليقك هنا',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (commentController.text.trim().isEmpty) {
+                _showSnackBar('التعليق لا يمكن أن يكون فارغًا', Colors.red);
+                return;
+              }
+              Navigator.pop(context);
+              _addCommentToAnalysis(analysisId, commentController.text.trim());
+            },
+            child: const Text('إرسال', style: TextStyle(color: Colors.teal)),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Map<String, String>> _translateMedicalHistory(String? medicalHistory) {
@@ -281,7 +397,7 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: _fetchPatientHealthRecord,
+                          onPressed: _loadTokenAndFetchData,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.teal,
                             shape: RoundedRectangleBorder(
@@ -505,7 +621,7 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
                                           columns: const [
                                             DataColumn(
                                               label: Text(
-                                                'تحليل السكر ',
+                                                'تحليل السكر',
                                                 style: TextStyle(fontWeight: FontWeight.bold),
                                               ),
                                             ),
@@ -521,10 +637,18 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
                                                 style: TextStyle(fontWeight: FontWeight.bold),
                                               ),
                                             ),
+                                            DataColumn(
+                                              label: Text(
+                                                'تعليق الدكتور',
+                                                style: TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
                                           ],
                                           rows: _healthRecord!['analysis'].map<DataRow>((imageData) {
+                                            final int analysisId = imageData['id'] ?? 0;
                                             final String imageUrl = imageData['image'] ?? '';
                                             final String description = imageData['description'] ?? 'بدون وصف';
+                                            final String comment = imageData['comment'] ?? 'لا يوجد تعليق';
                                             final String uploadedAt = imageData['uploaded_at'] ?? DateTime.now().toString();
                                             DateTime uploadDate;
                                             try {
@@ -589,6 +713,29 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
                                                           color: Colors.black87,
                                                           fontSize: 16,
                                                         ),
+                                                  ),
+                                                ),
+                                                DataCell(
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          comment,
+                                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                color: comment == 'لا يوجد توصية' ? Colors.grey[600] : Colors.black87,
+                                                                fontSize: 16,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(Icons.comment, color: Colors.teal),
+                                                        tooltip: 'إرسال توصية ',
+                                                        onPressed: () {
+                                                          _showCommentDialog(analysisId);
+                                                        },
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ],

@@ -172,7 +172,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
         final Map<String, String> readingTypeMap = {
           'صائم': 'FBS',
-          'عشوائي': 'R_slotBS',
+          'عشوائي': 'RBS', // تغيير من R_slotBS إلى RBS
           'بعد الأكل': 'PPBS',
         };
 
@@ -198,15 +198,24 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
             _timeController.clear();
             _selectedDateTime = null;
           });
-
           if (mounted) {
             _showSnackBar('تمت إضافة القراءة بنجاح!', Colors.green);
           }
           await _fetchGlucoseReadings();
           await _fetchMedicalHistory();
         } else {
+          String errorMessage = 'فشل في إضافة القراءة!';
+          if (response != null) {
+            errorMessage += ' رمز الحالة: ${response.statusCode}';
+            try {
+              final responseBody = jsonDecode(response.body);
+              errorMessage += ' - التفاصيل: ${responseBody['error'] ?? responseBody.toString()}';
+            } catch (e) {
+              errorMessage += ' - لا يمكن تحليل الاستجابة';
+            }
+          }
           if (mounted) {
-            _showSnackBar('فشل في إضافة القراءة!', Colors.red);
+            _showSnackBar(errorMessage, Colors.red);
           }
         }
       } catch (e) {
@@ -401,7 +410,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // عنوان تسجيل قراءات السكر
                 Text(
                   'تسجيل قراءات السكر',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -410,7 +418,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                       ),
                 ),
                 const SizedBox(height: 16),
-                // كارد تسجيل القراءة
                 Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(
@@ -542,7 +549,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // زر حفظ القراءة
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -559,7 +565,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                     ),
                   ),
                 ),
-                // فاصل بين القسمين
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20.0),
                   child: Divider(
@@ -569,7 +574,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                     endIndent: 20,
                   ),
                 ),
-                // عنوان رفع تحاليل السكر
                 Text(
                   'رفع تحاليل السكر',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -578,7 +582,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                       ),
                 ),
                 const SizedBox(height: 20),
-                // كارد رفع الصورة
                 Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(

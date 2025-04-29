@@ -590,7 +590,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                 columns: const [
                                                   DataColumn(
                                                     label: Text(
-                                                      'التحليل',
+                                                      'تحليل السكر',
                                                       style: TextStyle(fontWeight: FontWeight.bold),
                                                     ),
                                                   ),
@@ -606,10 +606,17 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                       style: TextStyle(fontWeight: FontWeight.bold),
                                                     ),
                                                   ),
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'توصية الدكتور',
+                                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
                                                 ],
                                                 rows: _analysisImages.map((imageData) {
                                                   final String imageUrl = imageData['image'] ?? '';
                                                   final String description = imageData['description'] ?? 'بدون وصف';
+                                                  final String comment = imageData['comment'] ?? 'لا يوجد توصية';
                                                   final DateTime uploadDate = DateTime.parse(imageData['uploaded_at'] ?? DateTime.now().toString());
                                                   final String formattedDate = DateFormat('yyyy-MM-dd').format(uploadDate);
 
@@ -665,6 +672,15 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                           formattedDate,
                                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                                 color: Colors.black87,
+                                                                fontSize: 16,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      DataCell(
+                                                        Text(
+                                                          comment,
+                                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                color: comment == 'لا يوجد توصية' ? Colors.grey[600] : Colors.black87,
                                                                 fontSize: 16,
                                                               ),
                                                         ),
