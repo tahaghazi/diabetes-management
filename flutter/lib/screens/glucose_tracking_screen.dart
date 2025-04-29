@@ -22,14 +22,14 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
   final TextEditingController _glucoseController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController(); // للوصف
+  final TextEditingController _descriptionController = TextEditingController();
   String _selectedReadingType = 'صائم';
   List<Map<String, dynamic>> glucoseReadings = [];
   DateTime? _selectedDateTime;
   final HttpService _httpService = HttpService();
   String? _token;
-  File? _selectedImage; // لتخزين الصورة المختارة
-  bool _isUploading = false; // لتتبع حالة التحميل
+  File? _selectedImage;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -172,7 +172,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
         final Map<String, String> readingTypeMap = {
           'صائم': 'FBS',
-          'عشوائي': 'RBS',
+          'عشوائي': 'R_slotBS',
           'بعد الأكل': 'PPBS',
         };
 
@@ -221,13 +221,12 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     }
   }
 
-  // دالة لاختيار الصورة من المعرض مع طلب إذن الصور
   Future<void> _pickImage() async {
     var status = await Permission.photos.request();
 
     if (status.isGranted) {
       setState(() {
-        _isUploading = true; // بدء التحميل
+        _isUploading = true;
       });
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -235,11 +234,11 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
       if (pickedFile != null && mounted) {
         setState(() {
           _selectedImage = File(pickedFile.path);
-          _isUploading = false; // إنهاء التحميل
+          _isUploading = false;
         });
       } else {
         setState(() {
-          _isUploading = false; // إنهاء التحميل إذا لم يتم اختيار صورة
+          _isUploading = false;
         });
       }
     } else if (status.isDenied) {
@@ -254,7 +253,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     }
   }
 
-  // دالة لإلغاء الصورة المختارة
   void _cancelImage() {
     setState(() {
       _selectedImage = null;
@@ -265,7 +263,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     }
   }
 
-  // دالة لرفع الصورة إلى الـ API
   Future<void> _uploadImage() async {
     if (_selectedImage == null) {
       if (mounted) {
@@ -282,7 +279,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     }
 
     setState(() {
-      _isUploading = true; // بدء التحميل
+      _isUploading = true;
     });
 
     try {
@@ -291,10 +288,8 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
         Uri.parse('http://10.0.2.2:8000/api/upload-analysis/'),
       );
 
-      // إضافة رأس التوكن
       request.headers['Authorization'] = 'Bearer $_token';
 
-      // إضافة الصورة
       request.files.add(
         await http.MultipartFile.fromPath(
           'image',
@@ -302,12 +297,10 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
         ),
       );
 
-      // إضافة الوصف إذا كان موجودًا
       if (_descriptionController.text.isNotEmpty) {
         request.fields['description'] = _descriptionController.text;
       }
 
-      // إرسال الطلب
       var response = await request.send();
       var responseBody = await response.stream.bytesToString();
 
@@ -341,7 +334,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isUploading = false; // إنهاء التحميل
+          _isUploading = false;
         });
       }
     }
@@ -408,147 +401,6 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // عنوان رفع تحاليل السكر
-                Text(
-                  'رفع تحاليل السكر',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.teal,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 20),
-                // كارد رفع الصورة
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // حقل الوصف
-                        TextField(
-                          controller: _descriptionController,
-                          decoration: InputDecoration(
-                            labelText: 'وصف الصورة (اختياري)',
-                            prefixIcon: const Icon(Icons.description),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Colors.black, width: 1),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Colors.black, width: 1),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Colors.black, width: 1.5),
-                            ),
-                          ),
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 10),
-                        // زر اختيار الصورة مع مؤشر التحميل
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _isUploading ? null : _pickImage,
-                            icon: _isUploading
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                : const Icon(Icons.photo_library),
-                            label: Text(_isUploading ? 'جارٍ التحميل...' : 'اختيار من المعرض'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        // عرض الصورة المختارة
-                        if (_selectedImage != null) ...[
-                          Container(
-                            height: 150,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Image.file(
-                              _selectedImage!,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          // زر إلغاء الصورة
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _cancelImage,
-                              icon: const Icon(Icons.cancel),
-                              label: const Text('إلغاء الصورة'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          // زر رفع الصورة
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _isUploading ? null : _uploadImage,
-                              icon: _isUploading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      ),
-                                    )
-                                  : const Icon(Icons.upload),
-                              label: Text(_isUploading ? 'جارٍ الرفع...' : 'رفع الصورة'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                backgroundColor: Colors.teal,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                // فاصل بين القسمين
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20.0),
-                  child: Divider(
-                    color: Color.fromARGB(255, 137, 150, 0),
-                    thickness: 6,
-                    indent: 20,
-                    endIndent: 20,
-                  ),
-                ),
                 // عنوان تسجيل قراءات السكر
                 Text(
                   'تسجيل قراءات السكر',
@@ -690,7 +542,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // زر حفظ القراءة خارج الكارد
+                // زر حفظ القراءة
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -704,6 +556,142 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
                     child: const Text(
                       'حفظ القراءة',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                // فاصل بين القسمين
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                  child: Divider(
+                    color: Color.fromARGB(255, 137, 150, 0),
+                    thickness: 6,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+                ),
+                // عنوان رفع تحاليل السكر
+                Text(
+                  'رفع تحاليل السكر',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.teal,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 20),
+                // كارد رفع الصورة
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _descriptionController,
+                          decoration: InputDecoration(
+                            labelText: 'وصف الصورة (اختياري)',
+                            prefixIcon: const Icon(Icons.description),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Colors.black, width: 1.5),
+                            ),
+                          ),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isUploading ? null : _pickImage,
+                            icon: _isUploading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Icon(Icons.photo_library),
+                            label: Text(_isUploading ? 'جارٍ التحميل...' : 'اختيار من المعرض'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (_selectedImage != null) ...[
+                          Container(
+                            height: 150,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Image.file(
+                              _selectedImage!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _cancelImage,
+                              icon: const Icon(Icons.cancel),
+                              label: const Text('إلغاء الصورة'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _isUploading ? null : _uploadImage,
+                              icon: _isUploading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Icon(Icons.upload),
+                              label: Text(_isUploading ? 'جارٍ الرفع...' : 'رفع الصورة'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                backgroundColor: Colors.teal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),

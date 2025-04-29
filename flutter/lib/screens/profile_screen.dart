@@ -20,6 +20,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
   bool _isLoading = false;
   Map<String, dynamic>? _linkedDoctor;
   List<Map<String, dynamic>> _glucoseReadings = [];
+  List<Map<String, dynamic>> _analysisImages = [];
   String? _token;
   final HttpService _httpService = HttpService();
 
@@ -77,6 +78,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
         await _loadUserData();
         if (Provider.of<UserProvider>(context, listen: false).accountType == 'patient') {
           await _fetchGlucoseReadings();
+          await _fetchAnalysisImages();
         }
       } else {
         _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
@@ -209,6 +211,31 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
       }
     } catch (e) {
       _showSnackBar('فشل في جلب قياسات السكر: $e', Colors.red);
+    }
+  }
+
+  Future<void> _fetchAnalysisImages() async {
+    if (_token == null) return;
+
+    try {
+      final response = await _httpService.makeRequest(
+        method: 'GET',
+        url: Uri.parse('http://10.0.2.2:8000/api/my-analysis/'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response != null && response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['data'] != null) {
+          setState(() {
+            _analysisImages = List<Map<String, dynamic>>.from(responseData['data']);
+          });
+        }
+      } else {
+        _showSnackBar('فشل في جلب تحاليل السكر!', Colors.red);
+      }
+    } catch (e) {
+      _showSnackBar('فشل في جلب تحاليل السكر: $e', Colors.red);
     }
   }
 
@@ -349,7 +376,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                     _linkedDoctor != null
                                         ? Container(
                                             constraints: BoxConstraints(
-                                              minWidth: 300, // عرض أكبر ليبدو مستطيلًا
+                                              minWidth: 300,
                                               maxWidth: MediaQuery.of(context).size.width * 0.8,
                                             ),
                                             padding: const EdgeInsets.all(12.0),
@@ -512,6 +539,86 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                               dataRowMaxHeight: 50,
                                               headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
                                             ),
+                                          ),
+                                    const SizedBox(height: 16),
+                                    Divider(
+                                      color: Colors.grey[300],
+                                      thickness: 2.0,
+                                      indent: 20,
+                                      endIndent: 20,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'تحاليل السكر',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _analysisImages.isEmpty
+                                        ? Center(
+                                            child: Text(
+                                              'لا توجد تحاليل متاحة',
+                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    color: Colors.grey[600],
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                            ),
+                                          )
+                                        : ListView.builder(
+                                            shrinkWrap: true,
+                                            physics: const NeverScrollableScrollPhysics(),
+                                            itemCount: _analysisImages.length,
+                                            itemBuilder: (context, index) {
+                                              final imageData = _analysisImages[index];
+                                              final String imageUrl = imageData['image'] ?? '';
+                                              final String description = imageData['description'] ?? 'بدون وصف';
+                                              final DateTime uploadDate = DateTime.parse(imageData['uploaded_at'] ?? DateTime.now().toString());
+                                              final String formattedDate = DateFormat('yyyy-MM-dd').format(uploadDate);
+
+                                              return Card(
+                                                elevation: 4,
+                                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(12.0),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      ClipRRect(
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        child: Image.network(
+                                                          'http://10.0.2.2:8000$imageUrl',
+                                                          height: 150,
+                                                          width: double.infinity,
+                                                          fit: BoxFit.cover,
+                                                          errorBuilder: (context, error, stackTrace) => Container(
+                                                            height: 150,
+                                                            color: Colors.grey.shade200,
+                                                            child: const Center(
+                                                              child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'الوصف: $description',
+                                                        style: Theme.of(context).textTheme.bodyMedium,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'تاريخ الرفع: $formattedDate',
+                                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           ),
                                   ],
                                 ),
