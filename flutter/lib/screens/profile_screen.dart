@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../main.dart';
 import 'package:intl/intl.dart';
+import 'full_image_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -239,36 +240,6 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     }
   }
 
-  Future<void> _deleteAnalysisImage(int analysisId) async {
-    if (_token == null) {
-      _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
-      return;
-    }
-
-    try {
-      final response = await _httpService.makeRequest(
-        method: 'DELETE',
-        url: Uri.parse('http://10.0.2.2:8000/api/delete-analysis/$analysisId/'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response != null && response.statusCode == 200) {
-        setState(() {
-          _analysisImages.removeWhere((image) => image['id'] == analysisId);
-        });
-        _showSnackBar('تم حذف التحليل بنجاح!', Colors.green);
-      } else {
-        final responseData = response != null ? jsonDecode(response.body) : {};
-        _showSnackBar(
-          responseData['error'] ?? 'فشل في حذف التحليل!',
-          Colors.red,
-        );
-      }
-    } catch (e) {
-      _showSnackBar('فشل في حذف التحليل: $e', Colors.red);
-    }
-  }
-
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -282,27 +253,6 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
-  }
-
-  Future<bool> _confirmDelete(BuildContext context) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('تأكيد الحذف'),
-            content: const Text('هل أنت متأكد أنك تريد حذف هذا التحليل؟'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('إلغاء'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('حذف', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        ) ??
-        false;
   }
 
   List<Map<String, dynamic>> _parseGlucoseReadings() {
@@ -606,6 +556,14 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                             fontWeight: FontWeight.w600,
                                           ),
                                     ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'اضغط على الأيقونة لعرض صورة التحليل',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Colors.grey[600],
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                    ),
                                     const SizedBox(height: 8),
                                     _analysisImages.isEmpty
                                         ? Center(
@@ -617,77 +575,111 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                   ),
                                             ),
                                           )
-                                        : ListView.builder(
-                                            shrinkWrap: true,
-                                            physics: const NeverScrollableScrollPhysics(),
-                                            itemCount: _analysisImages.length,
-                                            itemBuilder: (context, index) {
-                                              final imageData = _analysisImages[index];
-                                              final int analysisId = imageData['id'] ?? 0;
-                                              final String imageUrl = imageData['image'] ?? '';
-                                              final String description = imageData['description'] ?? 'بدون وصف';
-                                              final DateTime uploadDate = DateTime.parse(imageData['uploaded_at'] ?? DateTime.now().toString());
-                                              final String formattedDate = DateFormat('yyyy-MM-dd').format(uploadDate);
-
-                                              return Card(
-                                                elevation: 4,
-                                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
+                                        : RepaintBoundary(
+                                            child: SingleChildScrollView(
+                                              scrollDirection: Axis.horizontal,
+                                              child: DataTable(
+                                                border: TableBorder(
+                                                  horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                                                  verticalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                                                  top: BorderSide(width: 1, color: Colors.grey.shade300),
+                                                  bottom: BorderSide(width: 1, color: Colors.grey.shade300),
+                                                  left: BorderSide(width: 1, color: Colors.grey.shade300),
+                                                  right: BorderSide(width: 1, color: Colors.grey.shade300),
                                                 ),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(12.0),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: ClipRRect(
+                                                columns: const [
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'التحليل',
+                                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'الوصف',
+                                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'تاريخ الرفع',
+                                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                ],
+                                                rows: _analysisImages.map((imageData) {
+                                                  final String imageUrl = imageData['image'] ?? '';
+                                                  final String description = imageData['description'] ?? 'بدون وصف';
+                                                  final DateTime uploadDate = DateTime.parse(imageData['uploaded_at'] ?? DateTime.now().toString());
+                                                  final String formattedDate = DateFormat('yyyy-MM-dd').format(uploadDate);
+
+                                                  return DataRow(
+                                                    cells: [
+                                                      DataCell(
+                                                        GestureDetector(
+                                                          onTap: imageUrl.isEmpty
+                                                              ? null
+                                                              : () {
+                                                                  Navigator.push(
+                                                                    context,
+                                                                    MaterialPageRoute(
+                                                                      builder: (context) => FullImageScreen(
+                                                                        imageUrl: 'http://10.0.2.2:8000$imageUrl',
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                },
+                                                          child: Container(
+                                                            height: 45,
+                                                            width: 45,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.teal.shade100,
                                                               borderRadius: BorderRadius.circular(8),
-                                                              child: Image.network(
-                                                                'http://10.0.2.2:8000$imageUrl',
-                                                                height: 150,
-                                                                width: double.infinity,
-                                                                fit: BoxFit.cover,
-                                                                errorBuilder: (context, error, stackTrace) => Container(
-                                                                  height: 150,
-                                                                  color: Colors.grey.shade200,
-                                                                  child: const Center(
-                                                                    child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                                                                  ),
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color: Colors.black12,
+                                                                  blurRadius: 4,
+                                                                  offset: const Offset(2, 2),
                                                                 ),
-                                                              ),
+                                                              ],
+                                                            ),
+                                                            child: Icon(
+                                                              Icons.image,
+                                                              size: 35,
+                                                              color: imageUrl.isEmpty ? Colors.grey : Colors.teal.shade800,
                                                             ),
                                                           ),
-                                                          const SizedBox(width: 8),
-                                                          IconButton(
-                                                            icon: const Icon(Icons.delete, color: Colors.red),
-                                                            tooltip: 'حذف التحليل',
-                                                            onPressed: () async {
-                                                              final bool confirm = await _confirmDelete(context);
-                                                              if (confirm) {
-                                                                await _deleteAnalysisImage(analysisId);
-                                                              }
-                                                            },
-                                                          ),
-                                                        ],
+                                                        ),
                                                       ),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                        'الوصف: $description',
-                                                        style: Theme.of(context).textTheme.bodyMedium,
+                                                      DataCell(
+                                                        Text(
+                                                          description,
+                                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                color: Colors.black87,
+                                                                fontSize: 16,
+                                                              ),
+                                                        ),
                                                       ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        'تاريخ الرفع: $formattedDate',
-                                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                                      DataCell(
+                                                        Text(
+                                                          formattedDate,
+                                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                                color: Colors.black87,
+                                                                fontSize: 16,
+                                                              ),
+                                                        ),
                                                       ),
                                                     ],
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                                  );
+                                                }).toList(),
+                                                columnSpacing: 20,
+                                                dataRowMinHeight: 50,
+                                                dataRowMaxHeight: 70,
+                                                headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
+                                                dividerThickness: 1,
+                                                showBottomBorder: true,
+                                              ),
+                                            ),
                                           ),
                                   ],
                                 ),
