@@ -213,7 +213,28 @@ class AwarenessScreen extends StatelessWidget {
                         ),
                   ),
                   trailing: TextButton(
-                    onPressed: () => _launchURL('https://www.youtube.com/watch?v=KkwWbnvCDWU', context),
+                    onPressed: () => _launchURL('https://youtu.be/8hdwXIv8XCk?si=tvdXRsESI_TvuY3T', context),
+                    child: Text(
+                      'مشاهدة',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.teal,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: ListTile(
+                  leading: const Icon(Icons.play_circle_fill, color: Colors.redAccent),
+                  title: Text(
+                    '🎥 التعامل مع ارتفاع السكر',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.black87,
+                        ),
+                  ),
+                  trailing: TextButton(
+                    onPressed: () => _launchURL('https://youtu.be/bka7avp6_8s?si=bsfT21cuhx3Izr0_', context),
                     child: Text(
                       'مشاهدة',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -235,7 +256,7 @@ class AwarenessScreen extends StatelessWidget {
                   ),
                   trailing: TextButton(
                     onPressed: () => _launchURL(
-                        'https://www.moh.gov.sa/HealthAwareness/MedicalTools/Pages/Diabetes-Campaign-Tool.aspx',
+                        'https://www.mohp.gov.eg/ArticleDetails.aspx?subject_id=2481',
                         context),
                     child: Text(
                       'زيارة',

@@ -268,7 +268,6 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
       final response = await _httpService.makeRequest(
         method: 'DELETE',
         url: Uri.parse('http://192.168.100.6:8000/api/delete-analysis/$analysisId/'),
-        
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': 'Bearer $_token',
@@ -527,7 +526,22 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                             ),
                           ),
                           const SizedBox(height: 24),
-                          if (userProvider.accountType == 'patient')
+                          if (userProvider.accountType == 'patient') ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.medical_services, color: Colors.teal, size: 30),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'السجل المرضي',
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                        color: Colors.teal.shade800,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
                             Card(
                               elevation: 8,
                               shape: RoundedRectangleBorder(
@@ -538,20 +552,19 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'السجل المرضي',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            color: Colors.teal.shade800,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'قياسات السكر',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            color: Colors.black87,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.bloodtype, color: Colors.teal, size: 24),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'قياسات السكر',
+                                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                                color: Colors.black87,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 8),
                                     _parseGlucoseReadings().isEmpty
@@ -633,6 +646,13 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                               dataRowMinHeight: 50,
                                               dataRowMaxHeight: 50,
                                               headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
+                                              dividerThickness: 1.0, // Add horizontal lines
+                                              decoration: BoxDecoration(
+                                                border: Border(
+                                                  right: BorderSide(color: Colors.grey.shade300),
+                                                  left: BorderSide(color: Colors.grey.shade300),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                     const SizedBox(height: 16),
@@ -643,12 +663,19 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                       endIndent: 20,
                                     ),
                                     const SizedBox(height: 16),
-                                    Text(
-                                      'تحاليل السكر',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            color: Colors.black87,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.image, color: Colors.teal, size: 24),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'تحاليل السكر',
+                                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                                color: Colors.black87,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -782,6 +809,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                 ),
                               ),
                             ),
+                          ],
                           const SizedBox(height: 24),
                           Align(
                             alignment: Alignment.center,
