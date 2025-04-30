@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       primaryColor: Colors.teal,
-      scaffoldBackgroundColor: Colors.white, // خلفية بيضاء كاحتياط
+      scaffoldBackgroundColor: Colors.white,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent, // شفاف للسماح للتدرج بالظهور
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 4,
         titleTextStyle: TextStyle(
@@ -15,15 +16,17 @@ class AppTheme {
           color: Colors.white,
         ),
       ),
-      textTheme: const TextTheme(
-        headlineMedium: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: Color.fromARGB(255, 4, 192, 230), // تغيير لون النص إلى الأسود
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 16,
-          color: Colors.black, // تغيير لون النص إلى الأسود
+      textTheme: GoogleFonts.cairoTextTheme(
+        const TextTheme(
+          headlineMedium: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color.fromARGB(255, 4, 192, 230),
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -38,23 +41,23 @@ class AppTheme {
         ),
       ),
       inputDecorationTheme: const InputDecorationTheme(
-        filled: true, // تفعيل الخلفية
-        fillColor: Colors.white70, // خلفية بيضاء خفيفة
+        filled: true,
+        fillColor: Colors.white70,
         border: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey, width: 1), // خط خفيف لما البوكس مش متفعل
+          borderSide: BorderSide(color: Colors.grey, width: 1),
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.teal, width: 6), // خط أسمك وأوضح لما تفعّل البوكس
+          borderSide: BorderSide(color: Colors.teal, width: 6),
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
-        labelStyle: TextStyle(color: Colors.teal, fontSize: 14), // تصغير حجم الخط للـ label
+        labelStyle: TextStyle(color: Colors.teal, fontSize: 14),
         errorStyle: TextStyle(color: Colors.redAccent),
-        floatingLabelBehavior: FloatingLabelBehavior.always, // الـ label يترفع دايمًا
-        floatingLabelAlignment: FloatingLabelAlignment.start, // محاذاة الـ label لليمين (لأن الاتجاه RTL)
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
       ),
       cardTheme: const CardTheme(
-        color: Colors.white, // تحديد لون خلفية Card إلى الأبيض
+        color: Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -70,8 +73,8 @@ class AppTheme {
 
   static const backgroundGradient = LinearGradient(
     colors: [
-      Color(0xFFE0F7FA), // لون سماوي فاتح
-      Colors.white, // أبيض
+      Color(0xFFE0F7FA),
+      Colors.white,
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
