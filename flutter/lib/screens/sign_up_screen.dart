@@ -33,7 +33,7 @@ class SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      var url = Uri.parse('http://10.0.2.2:8000/api/register/');
+      var url = Uri.parse('http://192.168.100.6:8000/api/register/');
       var requestBody = {
         'email': _emailController.text.trim(),
         'password1': _passwordController.text.trim(),

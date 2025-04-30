@@ -20,7 +20,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
 
   // Instance of HttpService
   final HttpService httpService = HttpService();
-  final String baseUrl = "http://10.0.2.2:8000/api";
+  final String baseUrl = "http://192.168.100.6:8000/api";
 
   // Fetch drug suggestions for Autocomplete
   Future<List<String>> _getDrugSuggestions(String query) async {
