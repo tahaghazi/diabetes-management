@@ -72,7 +72,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     try {
       final response = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/my-patients/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/my-patients/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -387,7 +387,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
       final response = await HttpService().makeRequest(
         method: 'POST',
-        url: Uri.parse('http://10.0.2.2:8000/api/logout/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/logout/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -451,7 +451,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   Future<List<Map<String, dynamic>>> _fetchDoctors(String query) async {
     final response = await HttpService().makeRequest(
       method: 'GET',
-      url: Uri.parse('http://10.0.2.2:8000/api/search-doctors/?query=$query'),
+      url: Uri.parse('http://192.168.100.6:8000/api/search-doctors/?query=$query'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -751,7 +751,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         gradient: AppTheme.appBarGradient,
                       ),
                       child: SizedBox(
-                        height: 250,
+                        height: 350,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -760,15 +760,15 @@ class DashboardScreenState extends State<DashboardScreen> {
                               userProvider.accountType == 'doctor'
                                   ? 'assets/images/doctor_logo.png.webp'
                                   : 'assets/images/patient_logo.png.webp',
-                              height: 90,
-                              width: 90,
+                              height: 100,
+                              width: 100,
                             ),
                             const SizedBox(height: 12),
                             Text(
                               '${userProvider.firstName ?? 'الاسم'} ${userProvider.lastName ?? ''}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 28,
+                                fontSize: 30,
                                 fontWeight: FontWeight.bold,
                               ),
                               textAlign: TextAlign.center,
@@ -779,8 +779,8 @@ class DashboardScreenState extends State<DashboardScreen> {
                             Text(
                               userProvider.email ?? 'الإيميل',
                               style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 18,
+                                color: Color.fromARGB(179, 142, 6, 6),
+                                fontSize: 25,
                               ),
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
@@ -790,7 +790,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                             Text(
                               userProvider.accountType == 'doctor' ? 'دكتور' : 'مريض',
                               style: const TextStyle(
-                                color: Colors.white70,
+                                color: Color.fromARGB(179, 194, 13, 13),
                                 fontSize: 20,
                               ),
                               textAlign: TextAlign.center,
@@ -942,7 +942,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                                     try {
                                       final response = await HttpService().makeRequest(
                                         method: 'POST',
-                                        url: Uri.parse('http://10.0.2.2:8000/api/link-to-doctor/'),
+                                        url: Uri.parse('http://192.168.100.6:8000/api/link-to-doctor/'),
                                         headers: {'Content-Type': 'application/json'},
                                         body: jsonEncode({'doctor_id': doctor['id']}),
                                       );

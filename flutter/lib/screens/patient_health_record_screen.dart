@@ -71,7 +71,7 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
       debugPrint('Sending request to fetch patient health record');
       final healthResponse = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/patient-health-record/${widget.patientId}/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/patient-health-record/${widget.patientId}/'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10), onTimeout: () {
         throw Exception('تجاوز مهلة جلب السجل المرضي');
@@ -122,7 +122,7 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
     try {
       final response = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/patient-analysis/$patientId/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/patient-analysis/$patientId/'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10), onTimeout: () {
         throw Exception('تجاوز مهلة جلب تحاليل المريض');
@@ -157,7 +157,7 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
     try {
       final response = await _httpService.makeRequest(
         method: 'POST',
-        url: Uri.parse('http://10.0.2.2:8000/api/add-comment-to-analysis/$analysisId/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/add-comment-to-analysis/$analysisId/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'comment': comment}),
       );
@@ -670,7 +670,7 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
                                                               context,
                                                               MaterialPageRoute(
                                                                 builder: (context) => FullImageScreen(
-                                                                  imageUrl: 'http://10.0.2.2:8000$imageUrl',
+                                                                  imageUrl: 'http://192.168.100.6:8000$imageUrl',
                                                                 ),
                                                               ),
                                                             );

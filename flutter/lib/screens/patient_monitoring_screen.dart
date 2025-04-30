@@ -31,7 +31,7 @@ class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
     try {
       final response = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/my-patients/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/my-patients/'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 10), onTimeout: () {
         throw Exception('تجاوز مهلة الاتصال بالسيرفر');

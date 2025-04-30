@@ -59,7 +59,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/glucose/list/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/glucose/list/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -88,7 +88,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/profile/'),
+        url: Uri.parse('http://192.168.100.6:8000/api/profile/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -172,7 +172,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
         final Map<String, String> readingTypeMap = {
           'صائم': 'FBS',
-          'عشوائي': 'RBS', // تغيير من R_slotBS إلى RBS
+          'عشوائي': 'RBS',
           'بعد الأكل': 'PPBS',
         };
 
@@ -186,7 +186,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
         final response = await _httpService.makeRequest(
           method: 'POST',
-          url: Uri.parse('http://10.0.2.2:8000/api/glucose/add/'),
+          url: Uri.parse('http://192.168.100.6:8000/api/glucose/add/'),
           headers: {'Content-Type': 'application/json'},
           body: body,
         );
@@ -231,7 +231,20 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
   }
 
   Future<void> _pickImage() async {
-    var status = await Permission.photos.request();
+    PermissionStatus status;
+
+    if (Platform.isAndroid) {
+      // لإصدارات Android 13 وأحدث (API 33+)
+      if (Platform.version.contains('API 33') || Platform.version.contains('API 34')) {
+        status = await Permission.photos.request();
+      } else {
+        // لإصدارات Android 12 وأقدم (مثل Android 11)
+        status = await Permission.storage.request();
+      }
+    } else {
+      // لنظام iOS
+      status = await Permission.photos.request();
+    }
 
     if (status.isGranted) {
       setState(() {
@@ -294,7 +307,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://10.0.2.2:8000/api/upload-analysis/'),
+        Uri.parse('http://192.168.100.6:8000/api/upload-analysis/'),
       );
 
       request.headers['Authorization'] = 'Bearer $_token';

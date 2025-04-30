@@ -97,8 +97,11 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/profile/'),
-        headers: {'Content-Type': 'application/json'},
+        url: Uri.parse('http://192.168.100.6:8000/api/profile/'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8',
+        },
       );
 
       if (response == null) {
@@ -151,8 +154,11 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/my-doctor/'),
-        headers: {'Content-Type': 'application/json'},
+        url: Uri.parse('http://192.168.100.6:8000/api/my-doctor/'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8',
+        },
       );
 
       if (response == null) {
@@ -196,12 +202,15 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/glucose/list/'),
-        headers: {'Content-Type': 'application/json'},
+        url: Uri.parse('http://192.168.100.6:8000/api/glucose/list/'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8',
+        },
       );
 
       if (response != null && response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+        final responseData = jsonDecode(utf8.decode(response.bodyBytes));
         if (responseData['data'] != null) {
           setState(() {
             _glucoseReadings = List<Map<String, dynamic>>.from(responseData['data']);
@@ -221,15 +230,21 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/my-analysis/'),
-        headers: {'Content-Type': 'application/json'},
+        url: Uri.parse('http://192.168.100.6:8000/api/my-analysis/'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8',
+        },
       );
 
       if (response != null && response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+        final responseData = jsonDecode(utf8.decode(response.bodyBytes));
         if (responseData['data'] != null) {
           setState(() {
             _analysisImages = List<Map<String, dynamic>>.from(responseData['data']);
+            for (var image in _analysisImages) {
+              debugPrint('Description: ${image['description']}');
+            }
           });
         }
       } else {
@@ -240,13 +255,92 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     }
   }
 
+  Future<void> _deleteAnalysis(int analysisId) async {
+    debugPrint('Attempting to delete analysis with ID: $analysisId');
+    if (_token == null) {
+      debugPrint('No token found');
+      _showSnackBar('لم يتم العثور على رمز الوصول! يرجى تسجيل الدخول.', Colors.red);
+      return;
+    }
+
+    try {
+      debugPrint('Sending DELETE request to: http://192.168.100.6:8000/api/delete-analysis/$analysisId/');
+      final response = await _httpService.makeRequest(
+        method: 'DELETE',
+        url: Uri.parse('http://192.168.100.6:8000/api/delete-analysis/$analysisId/'),
+        
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      debugPrint('Delete Analysis Response Status: ${response?.statusCode}');
+      debugPrint('Delete Analysis Response Body: ${response?.body}');
+
+      if (response != null && response.statusCode == 200) {
+        setState(() {
+          _analysisImages.removeWhere((image) => image['id'] == analysisId);
+        });
+        _showSnackBar('تم حذف التحليل بنجاح!', Colors.green);
+      } else {
+        final responseData = response != null ? jsonDecode(utf8.decode(response.bodyBytes)) : {};
+        debugPrint('Response Data: $responseData');
+        _showSnackBar(
+          responseData['error'] ?? 'فشل في حذف التحليل!',
+          Colors.red,
+        );
+      }
+    } catch (e) {
+      debugPrint('Delete Analysis Error: $e');
+      _showSnackBar('فشل في حذف التحليل: $e', Colors.red);
+    }
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog(int analysisId) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'تأكيد الحذف',
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'هل أنت متأكد من حذف هذا التحليل؟ لا يمكن التراجع عن هذا الإجراء.',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'إلغاء',
+                style: TextStyle(fontFamily: 'Cairo', color: Colors.teal),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'حذف',
+                style: TextStyle(fontFamily: 'Cairo', color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+                fontFamily: 'Cairo',
+              ),
         ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
@@ -477,25 +571,25 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                 DataColumn(
                                                   label: Text(
                                                     'الرقم',
-                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                                                   ),
                                                 ),
                                                 DataColumn(
                                                   label: Text(
                                                     'نوع القياس',
-                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                                                   ),
                                                 ),
                                                 DataColumn(
                                                   label: Text(
                                                     'مستوى السكر',
-                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                                                   ),
                                                 ),
                                                 DataColumn(
                                                   label: Text(
                                                     'التوقيت',
-                                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                                                   ),
                                                 ),
                                               ],
@@ -558,7 +652,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'اضغط على الأيقونة لعرض صورة التحليل',
+                                      'اضغط على الصورة لعرضها بالكامل أو على أيقونة الحذف لحذف التحليل',
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                             color: Colors.grey[600],
                                             fontStyle: FontStyle.italic,
@@ -575,127 +669,114 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                   ),
                                             ),
                                           )
-                                        : RepaintBoundary(
-                                            child: SingleChildScrollView(
-                                              scrollDirection: Axis.horizontal,
-                                              child: DataTable(
-                                                border: TableBorder(
-                                                  horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                                                  verticalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                                                  top: BorderSide(width: 1, color: Colors.grey.shade300),
-                                                  bottom: BorderSide(width: 1, color: Colors.grey.shade300),
-                                                  left: BorderSide(width: 1, color: Colors.grey.shade300),
-                                                  right: BorderSide(width: 1, color: Colors.grey.shade300),
-                                                ),
-                                                columns: const [
-                                                  DataColumn(
-                                                    label: Text(
-                                                      'تحليل السكر',
-                                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                  DataColumn(
-                                                    label: Text(
-                                                      'الوصف',
-                                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                  DataColumn(
-                                                    label: Text(
-                                                      'تاريخ الرفع',
-                                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                  DataColumn(
-                                                    label: Text(
-                                                      'توصية الدكتور',
-                                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                                    ),
-                                                  ),
-                                                ],
-                                                rows: _analysisImages.map((imageData) {
-                                                  final String imageUrl = imageData['image'] ?? '';
-                                                  final String description = imageData['description'] ?? 'بدون وصف';
-                                                  final String comment = imageData['comment'] ?? 'لا يوجد توصية';
-                                                  final DateTime uploadDate = DateTime.parse(imageData['uploaded_at'] ?? DateTime.now().toString());
-                                                  final String formattedDate = DateFormat('yyyy-MM-dd').format(uploadDate);
+                                        : ListView.builder(
+                                            shrinkWrap: true,
+                                            physics: const NeverScrollableScrollPhysics(),
+                                            itemCount: _analysisImages.length,
+                                            itemBuilder: (context, index) {
+                                              final imageData = _analysisImages[index];
+                                              final int analysisId = imageData['id'] ?? 0;
+                                              final String imageUrl = imageData['image'] ?? '';
+                                              final String description = imageData['description'] ?? 'بدون وصف';
+                                              final String comment = imageData['comment'] ?? 'لا يوجد توصية';
+                                              final DateTime uploadDate =
+                                                  DateTime.parse(imageData['uploaded_at'] ?? DateTime.now().toString());
+                                              final String formattedDate = DateFormat('yyyy-MM-dd').format(uploadDate);
 
-                                                  return DataRow(
-                                                    cells: [
-                                                      DataCell(
-                                                        GestureDetector(
-                                                          onTap: imageUrl.isEmpty
-                                                              ? null
-                                                              : () {
-                                                                  Navigator.push(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder: (context) => FullImageScreen(
-                                                                        imageUrl: 'http://10.0.2.2:8000$imageUrl',
-                                                                      ),
+                                              debugPrint('Rendering analysis with ID: $analysisId, Description: $description');
+
+                                              return Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                                child: Card(
+                                                  elevation: 4,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      GestureDetector(
+                                                        onTap: imageUrl.isEmpty
+                                                            ? null
+                                                            : () {
+                                                                Navigator.push(
+                                                                  context,
+                                                                  MaterialPageRoute(
+                                                                    builder: (context) => FullImageScreen(
+                                                                      imageUrl: 'http://192.168.100.6:8000$imageUrl',
                                                                     ),
-                                                                  );
-                                                                },
-                                                          child: Container(
-                                                            height: 45,
-                                                            width: 45,
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.teal.shade100,
-                                                              borderRadius: BorderRadius.circular(8),
-                                                              boxShadow: [
-                                                                BoxShadow(
-                                                                  color: Colors.black12,
-                                                                  blurRadius: 4,
-                                                                  offset: const Offset(2, 2),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                            child: Icon(
-                                                              Icons.image,
-                                                              size: 35,
-                                                              color: imageUrl.isEmpty ? Colors.grey : Colors.teal.shade800,
+                                                                  ),
+                                                                );
+                                                              },
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(8),
+                                                          child: Image.network(
+                                                            'http://192.168.100.6:8000$imageUrl',
+                                                            height: 150,
+                                                            width: double.infinity,
+                                                            fit: BoxFit.cover,
+                                                            errorBuilder: (context, error, stackTrace) => Container(
+                                                              height: 150,
+                                                              color: Colors.grey.shade200,
+                                                              child: const Center(
+                                                                child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
                                                       ),
-                                                      DataCell(
-                                                        Text(
-                                                          description,
+                                                      const SizedBox(height: 8),
+                                                      Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                                        child: IconButton(
+                                                          icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                                                          tooltip: 'حذف التحليل',
+                                                          onPressed: analysisId == 0
+                                                              ? null
+                                                              : () async {
+                                                                  final bool? confirm = await _showDeleteConfirmationDialog(analysisId);
+                                                                  if (confirm == true) {
+                                                                    await _deleteAnalysis(analysisId);
+                                                                  }
+                                                                },
+                                                        ),
+                                                      ),
+                                                      Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                                        child: Text(
+                                                          'الوصف: $description',
                                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                                 color: Colors.black87,
-                                                                fontSize: 16,
+                                                                fontFamily: 'Cairo',
                                                               ),
                                                         ),
                                                       ),
-                                                      DataCell(
-                                                        Text(
-                                                          formattedDate,
+                                                      Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                                        child: Text(
+                                                          'تاريخ الرفع: $formattedDate',
                                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                                color: Colors.black87,
-                                                                fontSize: 16,
+                                                                color: Colors.grey[600],
+                                                                fontFamily: 'Cairo',
                                                               ),
                                                         ),
                                                       ),
-                                                      DataCell(
-                                                        Text(
-                                                          comment,
+                                                      Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                                        child: Text(
+                                                          'توصية الدكتور: $comment',
                                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                                 color: comment == 'لا يوجد توصية' ? Colors.grey[600] : Colors.black87,
-                                                                fontSize: 16,
+                                                                fontFamily: 'Cairo',
                                                               ),
                                                         ),
                                                       ),
+                                                      const SizedBox(height: 8),
                                                     ],
-                                                  );
-                                                }).toList(),
-                                                columnSpacing: 20,
-                                                dataRowMinHeight: 50,
-                                                dataRowMaxHeight: 70,
-                                                headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
-                                                dividerThickness: 1,
-                                                showBottomBorder: true,
-                                              ),
-                                            ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           ),
                                   ],
                                 ),
