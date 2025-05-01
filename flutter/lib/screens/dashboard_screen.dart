@@ -378,10 +378,11 @@ class DashboardScreenState extends State<DashboardScreen> {
         _showSnackBar('تم تسجيل الخروج', Colors.green);
         await prefs.clear();
         HttpService().clearTokens();
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
         return;
       }
 
@@ -391,45 +392,47 @@ class DashboardScreenState extends State<DashboardScreen> {
         headers: {'Content-Type': 'application/json'},
       );
 
+      await prefs.clear();
+      HttpService().clearTokens();
+
       if (response == null) {
-        if (!mounted) return;
-        await prefs.clear();
-        HttpService().clearTokens();
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+        if (mounted) {
+          _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
         return;
       }
 
       debugPrint('Response Status: ${response.statusCode}');
       debugPrint('Response Body: ${response.body}');
 
-      await prefs.clear();
-      HttpService().clearTokens();
-
       if (response.statusCode == 200 || response.statusCode == 204) {
-        if (!mounted) return;
-        _showSnackBar('تم تسجيل الخروج بنجاح', Colors.green);
+        if (mounted) {
+          _showSnackBar('تم تسجيل الخروج بنجاح', Colors.green);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
       } else {
-        if (!mounted) return;
-        _showSnackBar('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}', Colors.red);
+        if (mounted) {
+          _showSnackBar('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}', Colors.red);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
       }
-
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
     } catch (e) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      _showSnackBar('حدث خطأ أثناء تسجيل الخروج: $e', Colors.red);
       await prefs.clear();
       HttpService().clearTokens();
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      if (mounted) {
+        _showSnackBar('حدث خطأ أثناء تسجيل الخروج: $e', Colors.red);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
 
@@ -710,34 +713,36 @@ class DashboardScreenState extends State<DashboardScreen> {
                   gradient: AppTheme.appBarGradient,
                 ),
               ),
-              actions: [
-                Stack(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications),
-                      onPressed: _showAllNotificationsDialog,
-                    ),
-                    if (_notificationCount > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
+              actions: userProvider.accountType == 'patient'
+                  ? [
+                      Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.notifications),
+                            onPressed: _showAllNotificationsDialog,
                           ),
-                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                          child: Text(
-                            '$_notificationCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 10),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                          if (_notificationCount > 0)
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                child: Text(
+                                  '$_notificationCount',
+                                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                  ],
-                ),
-              ],
+                    ]
+                  : null,
             ),
             drawer: Drawer(
               child: Directionality(
@@ -763,7 +768,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                               height: 100,
                               width: 100,
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 20),
                             Text(
                               '${userProvider.firstName ?? 'الاسم'} ${userProvider.lastName ?? ''}',
                               style: const TextStyle(
@@ -775,18 +780,18 @@ class DashboardScreenState extends State<DashboardScreen> {
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 20),
                             Text(
                               userProvider.email ?? 'الإيميل',
                               style: const TextStyle(
                                 color: Color.fromARGB(179, 142, 6, 6),
-                                fontSize: 25,
+                                fontSize: 20,
                               ),
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
                               maxLines: 2,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 20),
                             Text(
                               userProvider.accountType == 'doctor' ? 'دكتور' : 'مريض',
                               style: const TextStyle(

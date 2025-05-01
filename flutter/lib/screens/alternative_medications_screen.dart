@@ -248,7 +248,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                               borderRadius: BorderRadius.circular(12.0), // زوايا دائرية
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.grey.withOpacity(0.3), // لون الظل
+                                  color: const Color.fromRGBO(158, 158, 158, 0.3), // Updated (line 251)
                                   spreadRadius: 2,
                                   blurRadius: 6,
                                   offset: const Offset(0, 3), // اتجاه الظل
@@ -361,8 +361,8 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                 int index = entry.key + 1; // الترقيم يبدأ من 1
                                 Map<String, String> med = entry.value;
                                 return DataRow(
-                                  color: MaterialStateProperty.resolveWith<Color?>(
-                                    (Set<MaterialState> states) {
+                                  color: WidgetStateProperty.resolveWith<Color?>( // Updated (line 364)
+                                    (Set<WidgetState> states) { // Updated (line 365)
                                       // ألوان متناوبة للصفوف
                                       return index % 2 == 0 ? Colors.white : Colors.cyan[50];
                                     },
@@ -444,4 +444,3 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
     );
   }
 }
-  

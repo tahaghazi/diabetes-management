@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diabetes_management/config/theme.dart';
+import 'package:logger/logger.dart'; // Added logger import
 
 class AIAnalysisScreen extends StatefulWidget {
   const AIAnalysisScreen({super.key});
@@ -30,6 +31,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
   String? _error;
   bool _isLoading = false;
   String? _selectedGender;
+  final logger = Logger(); // Initialize logger
 
   @override
   void initState() {
@@ -89,8 +91,8 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
           'Age': _controllers['Age']!.text.replaceAll(',', '.'),
         };
 
-        // Print the data being sent for debugging
-        print('Data being sent: $data');
+        // Replaced print with logger (line 93)
+        logger.d('Data being sent: $data');
 
         // Get the auth token
         final String? authToken = await _getAuthToken();
@@ -108,14 +110,14 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
           body: jsonEncode(data),
         );
 
-        // Print the response details for debugging
-        print('Response status: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        // Replaced print with logger (lines 112, 113)
+        logger.d('Response status: ${response.statusCode}');
+        logger.d('Response body: ${response.body}');
 
         if (response.statusCode == 200) {
           final result = jsonDecode(response.body);
           String prediction = result['prediction'] ?? 'غير معروف';
-          
+
           // Convert English prediction to Arabic if needed
           if (prediction.toLowerCase() == 'positive') {
             prediction = 'إيجابي';
@@ -134,8 +136,8 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
           throw Exception(error);
         }
       } catch (e) {
-        // Print the error for debugging
-        print('Error: $e');
+        // Replaced print with logger (line 138)
+        logger.e('Error: $e');
         setState(() {
           _error = e.toString();
         });
@@ -165,7 +167,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, 
+  Widget _buildTextField(String label, TextEditingController controller,
       {bool enabled = true, List<TextInputFormatter>? inputFormatters}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -269,7 +271,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
             width: isSelected ? 3 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: const Color.fromRGBO(0, 128, 0, 0.1),
+          color: const Color.fromRGBO(0, 128, 0, 0.1), // Updated (line 408)
           boxShadow: [
             BoxShadow(
               color: const Color.fromRGBO(255, 0, 0, 0.1),
@@ -364,7 +366,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
                           ),
                           const SizedBox(height: 20),
                           if (_selectedGender == 'Female')
-                            _buildTextField('عدد مرات الحمل', _controllers['Pregnancies']!, 
+                            _buildTextField('عدد مرات الحمل', _controllers['Pregnancies']!,
                                 inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                           _buildTextField('مستوى الجلوكوز', _controllers['Glucose']!),
                           _buildTextField('ضغط الدم', _controllers['BloodPressure']!),
@@ -405,8 +407,8 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: _result == 'إيجابي'
-                                    ? Colors.red.withOpacity(0.1)
-                                    : Colors.green.withOpacity(0.1),
+                                    ? const Color.fromRGBO(255, 0, 0, 0.1) // Updated (line 409)
+                                    : const Color.fromRGBO(0, 128, 0, 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -424,7 +426,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
+                                color: const Color.fromRGBO(255, 0, 0, 0.1), // Updated (line 427)
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
