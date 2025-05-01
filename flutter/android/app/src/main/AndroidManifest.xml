@@ -10,6 +10,8 @@
     <!-- أذونات للوصول إلى الصور -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- إذن لدعم نية ملء الشاشة لمنبه الدواء -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <application
         android:label="Diabetes Manager"

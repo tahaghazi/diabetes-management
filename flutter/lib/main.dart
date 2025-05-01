@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:provider/provider.dart'; // الـ import الجديد لـ provider
+import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/sign_up_screen.dart';
@@ -13,15 +13,17 @@ import 'screens/awareness_screen.dart';
 import 'screens/alternative_medications_screen.dart';
 import 'screens/account_type_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/medication_confirmation_screen.dart';
 import 'package:diabetes_management/services/notification_service.dart';
-import 'package:diabetes_management/services/user_provider.dart'; // الـ import الجديد لـ UserProvider
+import 'package:diabetes_management/services/user_provider.dart';
 import 'config/theme.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.init();
+  await NotificationService.init(navigatorKey: navigatorKey);
   runApp(const DiabetesApp());
 }
 
@@ -32,9 +34,10 @@ class DiabetesApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider()), // إضافة UserProvider
+        ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'Diabetes Management',
         theme: AppTheme.lightTheme,
@@ -59,8 +62,19 @@ class DiabetesApp extends StatelessWidget {
                 email: ModalRoute.of(context)!.settings.arguments as String,
               ),
           '/Awareness': (context) => const AwarenessScreen(),
-          '/alternative_medications': (context) => const AlternativeMedicationsScreen(),
+          '/alternative_medications': (context) =>
+              const AlternativeMedicationsScreen(),
           '/account_type': (context) => const AccountTypeScreen(),
+          '/medication_confirmation': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments
+                as Map<String, dynamic>;
+            return MedicationConfirmationScreen(
+              notificationId: args['notificationId'],
+              title: args['title'],
+              body: args['body'],
+              medicationName: args['medicationName'],
+            );
+          },
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/sign_up') {

@@ -50,7 +50,6 @@ class RemindersScreenState extends State<RemindersScreen> {
   @override
   void initState() {
     super.initState();
-    NotificationService.init();
     _loadReminders();
   }
 
@@ -114,9 +113,24 @@ class RemindersScreenState extends State<RemindersScreen> {
   }
 
   Future<void> _addReminder() async {
-    if (!_formKey.currentState!.validate() || _selectedTime == null) {
+    // تحقق من أن نوع التذكير تم اختياره
+    if (!_formKey.currentState!.validate()) {
       if (!mounted) return;
-      _showSnackBar('يرجى اختيار نوع التذكير والوقت', Colors.red);
+      _showSnackBar('يرجى اختيار نوع التذكير', Colors.red);
+      return;
+    }
+
+    // تحقق من أن الوقت تم اختياره
+    if (_selectedTime == null) {
+      if (!mounted) return;
+      _showSnackBar('يرجى اختيار الوقت', Colors.red);
+      return;
+    }
+
+    // تحقق من أن اسم الدواء تم إدخاله إذا كان نوع التذكير "الدواء"
+    if (_selectedReminderType == 'الدواء' && (_medicationName == null || _medicationName!.isEmpty)) {
+      if (!mounted) return;
+      _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
       return;
     }
 
@@ -207,6 +221,13 @@ class RemindersScreenState extends State<RemindersScreen> {
   }
 
   Future<void> _updateReminder(int id, String reminderType, TimeOfDay newTime, String? medicationName) async {
+    // تحقق من أن اسم الدواء تم إدخاله إذا كان نوع التذكير "الدواء"
+    if (reminderType == 'الدواء' && (medicationName == null || medicationName.isEmpty)) {
+      if (!mounted) return;
+      _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -261,9 +282,22 @@ class RemindersScreenState extends State<RemindersScreen> {
 
   Future<void> _deleteReminder(int id, int index) async {
     setState(() => _isLoading = true);
-    var tempReminder = _reminders[index];
+
+    // البحث عن التذكير في القائمة الرئيسية باستخدام id
+    final reminderIndex = _reminders.indexWhere((r) => r['id'] == id);
+    if (reminderIndex == -1) {
+      if (!mounted) return;
+      _showSnackBar('التذكير غير موجود', Colors.red);
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // حفظ التذكير المراد حذفه
+    final tempReminder = Map<String, dynamic>.from(_reminders[reminderIndex]);
+
+    // إزالة التذكير من القائمة
     setState(() {
-      _reminders.removeAt(index);
+      _reminders.removeAt(reminderIndex);
     });
 
     try {
@@ -272,7 +306,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       if (accessToken == null) {
         setState(() {
-          _reminders.insert(index, tempReminder);
+          _reminders.insert(reminderIndex, tempReminder);
         });
         if (!mounted) return;
         _showSnackBar('يرجى تسجيل الدخول مرة أخرى', Colors.red);
@@ -289,7 +323,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       if (response == null) {
         setState(() {
-          _reminders.insert(index, tempReminder);
+          _reminders.insert(reminderIndex, tempReminder);
         });
         if (!mounted) return;
         _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
@@ -302,14 +336,14 @@ class RemindersScreenState extends State<RemindersScreen> {
         await NotificationService.cancelNotification(id);
       } else {
         setState(() {
-          _reminders.insert(index, tempReminder);
+          _reminders.insert(reminderIndex, tempReminder);
         });
         if (!mounted) return;
         _showSnackBar('فشل حذف التذكير', Colors.red);
       }
     } catch (e) {
       setState(() {
-        _reminders.insert(index, tempReminder);
+        _reminders.insert(reminderIndex, tempReminder);
       });
       if (!mounted) return;
       _showSnackBar('فشل الاتصال بالسيرفر: $e', Colors.red);
@@ -418,12 +452,20 @@ class RemindersScreenState extends State<RemindersScreen> {
           ),
           TextButton(
             onPressed: () {
-              if (editReminderType != null && editTime != null) {
-                _updateReminder(reminder['id'], editReminderType!, editTime!, editMedicationName);
-                Navigator.pop(context);
-              } else {
-                _showSnackBar('يرجى ملء جميع الحقول', Colors.red);
+              if (editReminderType == null) {
+                _showSnackBar('يرجى اختيار نوع التذكير', Colors.red);
+                return;
               }
+              if (editTime == null) {
+                _showSnackBar('يرجى اختيار الوقت', Colors.red);
+                return;
+              }
+              if (editReminderType == 'الدواء' && (editMedicationName == null || editMedicationName== null)) {
+                _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
+                return;
+              }
+              _updateReminder(reminder['id'], editReminderType!, editTime!, editMedicationName);
+              Navigator.pop(context);
             },
             child: Text(
               'حفظ',
@@ -487,7 +529,7 @@ class RemindersScreenState extends State<RemindersScreen> {
                       TextFormField(
                         controller: medicationController,
                         decoration: InputDecoration(
-                          labelText: 'اسم الدواء (اختياري)',
+                          labelText: 'اسم الدواء',
                           labelStyle: Theme.of(context).textTheme.bodyMedium,
                           prefixIcon: Icon(Icons.medical_services, color: Theme.of(context).primaryColor),
                           filled: true,
@@ -509,6 +551,12 @@ class RemindersScreenState extends State<RemindersScreen> {
                         onChanged: (value) {
                           editMedicationName = value.isEmpty ? null : value;
                           _logger.d('Medication Name Input: $editMedicationName');
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'يرجى كتابة اسم الدواء';
+                          }
+                          return null;
                         },
                       ),
                     const SizedBox(height: 16),
@@ -574,12 +622,20 @@ class RemindersScreenState extends State<RemindersScreen> {
           ),
           TextButton(
             onPressed: () {
-              if (_formKey.currentState!.validate() && _selectedTime != null) {
-                _addReminder();
-                Navigator.pop(context);
-              } else {
-                _showSnackBar('يرجى ملء جميع الحقول', Colors.red);
+              if (!_formKey.currentState!.validate()) {
+                _showSnackBar('يرجى ملء كل الحقول', Colors.red);
+                return;
               }
+              if (_selectedTime == null) {
+                _showSnackBar('يرجى اختيار الوقت', Colors.red);
+                return;
+              }
+              if (_selectedReminderType == 'الدواء' && (_medicationName == null || _medicationName!.isEmpty)) {
+                _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
+                return;
+              }
+              _addReminder();
+              Navigator.pop(context);
             },
             child: Text(
               'إضافة',
@@ -643,7 +699,7 @@ class RemindersScreenState extends State<RemindersScreen> {
                         TextFormField(
                           controller: _medicationController,
                           decoration: InputDecoration(
-                            labelText: 'اسم الدواء (اختياري)',
+                            labelText: 'اسم الدواء',
                             labelStyle: Theme.of(context).textTheme.bodyMedium,
                             prefixIcon: Icon(Icons.medical_services, color: Theme.of(context).primaryColor),
                             filled: true,
@@ -667,6 +723,12 @@ class RemindersScreenState extends State<RemindersScreen> {
                               _medicationName = value.isEmpty ? null : value;
                               _logger.d('Medication Name Input: $_medicationName');
                             });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'يرجى كتابة اسم الدواء';
+                            }
+                            return null;
                           },
                         ),
                       const SizedBox(height: 16),
