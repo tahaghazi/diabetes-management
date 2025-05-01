@@ -6,13 +6,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:logger/logger.dart';
+import 'dart:typed_data';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   static final Logger _logger = Logger();
 
-  static Future<void> init() async {
+  static Future<void> init({required GlobalKey<NavigatorState> navigatorKey}) async {
     try {
       tz.initializeTimeZones();
 
@@ -36,6 +37,19 @@ class NotificationService {
                 reminderType: payload['reminder_type'],
                 medicationName: payload['medication_name'],
               );
+
+              // فتح MedicationConfirmationScreen تلقائيًا لإشعارات الدواء
+              if (payload['reminder_type'] == 'medication') {
+                navigatorKey.currentState?.pushNamed(
+                  '/medication_confirmation',
+                  arguments: {
+                    'notificationId': payload['id'],
+                    'title': payload['title'],
+                    'body': payload['body'],
+                    'medicationName': payload['medication_name'],
+                  },
+                );
+              }
             } catch (e) {
               _logger.e('Error parsing notification payload: $e');
             }
@@ -47,10 +61,15 @@ class NotificationService {
 
       if (Platform.isAndroid && int.parse(Platform.version.split('.')[0]) >= 33) {
         await requestNotificationPermissions();
+        await requestExactAlarmPermission();
       }
     } catch (e) {
       _logger.e('Error initializing notifications: $e');
     }
+  }
+
+  static Future<NotificationAppLaunchDetails?> getNotificationAppLaunchDetails() async {
+    return await _notificationsPlugin.getNotificationAppLaunchDetails();
   }
 
   static Future<void> _createNotificationChannels() async {
@@ -74,14 +93,17 @@ class NotificationService {
       enableVibration: true,
     );
 
-    const AndroidNotificationChannel medicationChannel = AndroidNotificationChannel(
-      'medication_channel',
-      'تذكيرات الأدوية',
-      description: 'قناة لتذكيرات تناول الأدوية',
+    const AndroidNotificationChannel medicationAlarmChannel = AndroidNotificationChannel(
+      'medication_alarm_channel',
+      'منبه الأدوية',
+      description: 'قناة لمنبه تناول الأدوية',
       importance: Importance.max,
       playSound: true,
       sound: RawResourceAndroidNotificationSound('medication'),
       enableVibration: true,
+      showBadge: true,
+      enableLights: true,
+      ledColor: Color(0xFFF44336),
     );
 
     final androidPlugin = _notificationsPlugin
@@ -89,13 +111,20 @@ class NotificationService {
 
     await androidPlugin?.createNotificationChannel(glucoseChannel);
     await androidPlugin?.createNotificationChannel(hydrationChannel);
-    await androidPlugin?.createNotificationChannel(medicationChannel);
+    await androidPlugin?.createNotificationChannel(medicationAlarmChannel);
   }
 
   static Future<bool> requestNotificationPermissions() async {
     final result = await _notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+    return result ?? false;
+  }
+
+  static Future<bool> requestExactAlarmPermission() async {
+    final androidPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final result = await androidPlugin?.requestExactAlarmsPermission();
     return result ?? false;
   }
 
@@ -156,9 +185,9 @@ class NotificationService {
           break;
         case 'medication':
           androidDetails = AndroidNotificationDetails(
-            'medication_channel',
-            'تذكيرات الأدوية',
-            channelDescription: 'قناة لتذكيرات تناول الأدوية',
+            'medication_alarm_channel',
+            'منبه الأدوية',
+            channelDescription: 'قناة لمنبه تناول الأدوية',
             importance: Importance.max,
             priority: Priority.high,
             playSound: true,
@@ -168,6 +197,24 @@ class NotificationService {
             color: const Color(0xFFF44336),
             largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
             subText: medicationName,
+            ongoing: true,
+            autoCancel: false,
+            fullScreenIntent: true,
+            timeoutAfter: null,
+            ticker: 'منبه الدواء: $medicationName',
+            actions: [
+              const AndroidNotificationAction(
+                'confirm_action',
+                'تم تناول الدواء',
+                showsUserInterface: true,
+              ),
+              const AndroidNotificationAction(
+                'cancel_action',
+                'إلغاء',
+                showsUserInterface: true,
+              ),
+            ],
+            additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT لتكرار الصوت
           );
           break;
         default:

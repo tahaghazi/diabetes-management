@@ -50,7 +50,6 @@ class RemindersScreenState extends State<RemindersScreen> {
   @override
   void initState() {
     super.initState();
-    NotificationService.init();
     _loadReminders();
   }
 
