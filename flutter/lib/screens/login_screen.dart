@@ -26,27 +26,31 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
-    // التحقق من تفاصيل الإشعار بعد تحميل الشاشة
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.getNotificationAppLaunchDetails().then((details) {
-        if (details != null &&
-            details.notificationResponse != null &&
-            details.notificationResponse!.payload != null) {
-          final payload = jsonDecode(details.notificationResponse!.payload!);
-          if (payload['reminder_type'] == 'medication') {
-            Navigator.pushNamed(
-              context,
-              '/medication_confirmation',
-              arguments: {
-                'notificationId': payload['id'],
-                'title': payload['title'],
-                'body': payload['body'],
-                'medicationName': payload['medication_name'],
-              },
-            );
+    // التحقق من تفاصيل الإشعار فقط إذا كان المستخدم مسجل الدخول
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? accessToken = prefs.getString('access_token');
+      if (accessToken != null) { // فقط إذا كان المستخدم مسجل الدخول
+        NotificationService.getNotificationAppLaunchDetails().then((details) {
+          if (details != null &&
+              details.notificationResponse != null &&
+              details.notificationResponse!.payload != null) {
+            final payload = jsonDecode(details.notificationResponse!.payload!);
+            if (payload['reminder_type'] == 'medication') {
+              Navigator.pushNamed(
+                context,
+                '/medication_confirmation',
+                arguments: {
+                  'notificationId': payload['id'],
+                  'title': payload['title'],
+                  'body': payload['body'],
+                  'medicationName': payload['medication_name'],
+                },
+              );
+            }
           }
-        }
-      });
+        });
+      }
     });
   }
 

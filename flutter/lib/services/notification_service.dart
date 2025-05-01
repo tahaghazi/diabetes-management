@@ -26,9 +26,20 @@ class NotificationService {
       await _notificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) async {
+          _logger.i('Notification response received: actionId=${response.actionId}, payload=${response.payload}');
           if (response.payload != null) {
             try {
               Map<String, dynamic> payload = jsonDecode(response.payload!);
+              _logger.i('Parsed payload: $payload');
+
+              // التحقق من حالة تسجيل الدخول
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              String? accessToken = prefs.getString('access_token');
+              if (accessToken == null) {
+                _logger.i('تم تجاهل الإشعار لأن المستخدم غير مسجل الدخول');
+                return;
+              }
+
               await logNotification(
                 payload['id'],
                 payload['title'],
@@ -38,7 +49,6 @@ class NotificationService {
                 medicationName: payload['medication_name'],
               );
 
-              // فتح MedicationConfirmationScreen تلقائيًا لإشعارات الدواء
               if (payload['reminder_type'] == 'medication') {
                 navigatorKey.currentState?.pushNamed(
                   '/medication_confirmation',
@@ -54,6 +64,32 @@ class NotificationService {
               _logger.e('Error parsing notification payload: $e');
             }
           }
+
+          // معالجة إجراء "تم تناول الدواء"
+          if (response.actionId == 'confirm_action') {
+            try {
+              Map<String, dynamic> payload = jsonDecode(response.payload!);
+              // التحقق من حالة تسجيل الدخول
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              String? accessToken = prefs.getString('access_token');
+              if (accessToken == null) {
+                _logger.i('تم تجاهل إجراء تأكيد الدواء لأن المستخدم غير مسجل الدخول');
+                return;
+              }
+
+              navigatorKey.currentState?.pushNamed(
+                '/medication_confirmation',
+                arguments: {
+                  'notificationId': payload['id'],
+                  'title': payload['title'],
+                  'body': payload['body'],
+                  'medicationName': payload['medication_name'],
+                },
+              );
+            } catch (e) {
+              _logger.e('Error handling confirm action: $e');
+            }
+          }
         },
       );
 
@@ -62,6 +98,7 @@ class NotificationService {
       if (Platform.isAndroid && int.parse(Platform.version.split('.')[0]) >= 33) {
         await requestNotificationPermissions();
         await requestExactAlarmPermission();
+        await requestFullScreenIntentPermission();
       }
     } catch (e) {
       _logger.e('Error initializing notifications: $e');
@@ -128,6 +165,13 @@ class NotificationService {
     return result ?? false;
   }
 
+  static Future<bool> requestFullScreenIntentPermission() async {
+    // ملاحظة: flutter_local_notifications لا تدعم طلب هذا الإذن مباشرة
+    // يتم الاعتماد على إذن AndroidManifest.xml
+    // إذا كنت تستخدم مكتبة أخرى مثل permission_handler، يمكن طلب إذن ديناميكي هنا
+    return true;
+  }
+
   static Future<void> scheduleDailyNotification({
     required int id,
     required String title,
@@ -143,6 +187,10 @@ class NotificationService {
     }
 
     try {
+      // إلغاء الإشعار الموجود بنفس id إذا كان موجودًا
+      await cancelNotification(id);
+      _logger.i('تم إلغاء الإشعار القديم بنفس المعرف: $id');
+
       final location = tz.getLocation('Africa/Cairo');
       final now = tz.TZDateTime.now(location);
       var scheduledDate = tz.TZDateTime.from(scheduledTime, location);
@@ -197,20 +245,15 @@ class NotificationService {
             color: const Color(0xFFF44336),
             largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
             subText: medicationName,
-            ongoing: true,
-            autoCancel: false,
-            fullScreenIntent: true,
-            timeoutAfter: null,
+            ongoing: false, // تعطيل ongoing للسماح بإلغاء الإشعار بعد التفاعل
+            autoCancel: false, // الإبقاء على false لتجنب الإلغاء التلقائي
+            fullScreenIntent: true, // تفعيل الشاشة الكاملة لكل إشعار
+            timeoutAfter: null, // عدم تحديد وقت انتهاء
             ticker: 'منبه الدواء: $medicationName',
             actions: [
               const AndroidNotificationAction(
                 'confirm_action',
                 'تم تناول الدواء',
-                showsUserInterface: true,
-              ),
-              const AndroidNotificationAction(
-                'cancel_action',
-                'إلغاء',
                 showsUserInterface: true,
               ),
             ],
@@ -273,6 +316,15 @@ class NotificationService {
     }
   }
 
+  static Future<void> cancelAllNotifications() async {
+    try {
+      await _notificationsPlugin.cancelAll();
+      _logger.i('تم إلغاء جميع الإشعارات');
+    } catch (e) {
+      _logger.e('فشل إلغاء جميع الإشعارات: $e');
+    }
+  }
+
   static Future<void> logNotification(
     int id,
     String title,
@@ -285,25 +337,38 @@ class NotificationService {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       List<String> loggedNotifications = prefs.getStringList('logged_notifications') ?? [];
 
-      Map<String, dynamic> notificationData = {
-        'id': id,
-        'title': title,
-        'body': body,
-        'reminder_type': reminderType,
-        'scheduled_time': scheduledTime.toIso8601String(),
-        'received_time': DateTime.now().toIso8601String(),
-        if (medicationName != null) 'medication_name': medicationName,
-      };
-
+      // تحسين التحقق من التكرار باستخدام حقول إضافية
       bool exists = loggedNotifications.any((n) {
         Map<String, dynamic> existing = jsonDecode(n);
-        return existing['id'] == id && existing['scheduled_time'] == scheduledTime.toIso8601String();
+        // تجاهل الثواني والميلي ثانية في المقارنة
+        DateTime existingTime = DateTime.parse(existing['scheduled_time']);
+        bool timeMatch = existingTime.year == scheduledTime.year &&
+            existingTime.month == scheduledTime.month &&
+            existingTime.day == scheduledTime.day &&
+            existingTime.hour == scheduledTime.hour &&
+            existingTime.minute == scheduledTime.minute;
+        return existing['id'] == id &&
+            timeMatch &&
+            existing['title'] == title &&
+            existing['reminder_type'] == reminderType &&
+            (existing['medication_name'] ?? '') == (medicationName ?? '');
       });
 
       if (!exists) {
+        Map<String, dynamic> notificationData = {
+          'id': id,
+          'title': title,
+          'body': body,
+          'reminder_type': reminderType,
+          'scheduled_time': scheduledTime.toIso8601String(),
+          'received_time': DateTime.now().toIso8601String(),
+          if (medicationName != null) 'medication_name': medicationName,
+        };
         loggedNotifications.add(jsonEncode(notificationData));
         await prefs.setStringList('logged_notifications', loggedNotifications);
         _logger.i('تم تسجيل الإشعار: $title');
+      } else {
+        _logger.i('الإشعار موجود بالفعل: $title');
       }
     } catch (e) {
       _logger.e('فشل تسجيل الإشعار: $e');

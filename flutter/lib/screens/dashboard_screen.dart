@@ -30,7 +30,6 @@ class DashboardScreenState extends State<DashboardScreen> {
   bool _isLoadingPatientCount = false;
   String? _patientCountError;
   Timer? _notificationTimer;
-  List<Map<String, dynamic>> _lastNotifications = [];
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
@@ -130,22 +129,12 @@ class DashboardScreenState extends State<DashboardScreen> {
     List<Map<String, dynamic>> notifications = await NotificationService.getLoggedNotifications();
     debugPrint('Fetched notifications: ${notifications.length}');
     if (!mounted) return;
+
+    // تحديث عدد الإشعارات فقط
     setState(() {
       _notificationCount = notifications.length;
       debugPrint('Updated notification count: $_notificationCount');
     });
-
-    if (notifications.length > _lastNotifications.length) {
-      var newNotifications = notifications
-          .where((n) => !_lastNotifications.any((ln) => ln['id'] == n['id'] && ln['scheduled_time'] == n['scheduled_time']))
-          .toList();
-      debugPrint('New notifications: ${newNotifications.length}');
-      _lastNotifications = List.from(notifications);
-      if (newNotifications.isNotEmpty && mounted) {
-        debugPrint('Showing dialog for new notification: ${newNotifications.last}');
-        _showNewNotificationDialog(newNotifications.last);
-      }
-    }
   }
 
   void _startNotificationPolling() {
@@ -154,103 +143,6 @@ class DashboardScreenState extends State<DashboardScreen> {
         await _updateNotificationCount();
       }
     });
-  }
-
-  void _showNewNotificationDialog(Map<String, dynamic> notification) {
-    DateTime scheduledTime = DateTime.parse(notification['scheduled_time']);
-    final hour = scheduledTime.hour > 12
-        ? scheduledTime.hour - 12
-        : scheduledTime.hour == 0
-            ? 12
-            : scheduledTime.hour;
-    final minute = scheduledTime.minute.toString().padLeft(2, '0');
-    final period = scheduledTime.hour >= 12 ? 'مساءً' : 'صباحًا';
-
-    IconData notificationIcon;
-    Color notificationColor;
-    switch (notification['reminder_type'].toLowerCase()) {
-      case 'blood_glucose_test':
-        notificationIcon = Icons.monitor_heart;
-        notificationColor = Colors.teal;
-        break;
-      case 'hydration':
-        notificationIcon = Icons.water_drop;
-        notificationColor = Colors.tealAccent;
-        break;
-      case 'medication':
-        notificationIcon = Icons.medical_services;
-        notificationColor = Colors.teal;
-        break;
-      default:
-        notificationIcon = Icons.notifications_active;
-        notificationColor = Theme.of(context).primaryColor;
-    }
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            backgroundColor: Colors.white,
-            contentPadding: const EdgeInsets.all(20),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  notificationIcon,
-                  size: 40,
-                  color: notificationColor,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  notification['title'],
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: notificationColor),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.access_time, size: 20, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'الوقت: $hour:$minute $period',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-                if (notification['reminder_type'].toLowerCase() == 'medication' &&
-                    notification['medication_name'] != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'الدواء: ${notification['medication_name']}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'إغلاق',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ).then((_) {
-        if (mounted) {
-          _updateNotificationCount();
-        }
-      });
-    }
   }
 
   void _showAllNotificationsDialog() async {
@@ -373,55 +265,37 @@ class DashboardScreenState extends State<DashboardScreen> {
 
       debugPrint('Access Token being sent: $accessToken');
 
-      if (accessToken == null) {
-        if (!mounted) return;
-        _showSnackBar('تم تسجيل الخروج', Colors.green);
-        await prefs.clear();
-        HttpService().clearTokens();
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
+      // إلغاء جميع الإشعارات ومسح سجل الإشعارات
+      await NotificationService.cancelAllNotifications();
+      await NotificationService.clearLoggedNotifications();
+
+      // إرسال طلب تسجيل الخروج إلى الخادم إذا كان هناك رمز وصول
+      if (accessToken != null) {
+        final response = await HttpService().makeRequest(
+          method: 'POST',
+          url: Uri.parse('http://192.168.100.6:8000/api/logout/'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response == null) {
+          if (mounted) {
+            _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+          }
+        } else {
+          debugPrint('Response Status: ${response.statusCode}');
+          debugPrint('Response Body: ${response.body}');
         }
-        return;
       }
 
-      final response = await HttpService().makeRequest(
-        method: 'POST',
-        url: Uri.parse('http://192.168.100.6:8000/api/logout/'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
+      // مسح جميع بيانات SharedPreferences
       await prefs.clear();
       HttpService().clearTokens();
 
-      if (response == null) {
-        if (mounted) {
-          _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        }
-        return;
-      }
-
-      debugPrint('Response Status: ${response.statusCode}');
-      debugPrint('Response Body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        if (mounted) {
-          _showSnackBar('تم تسجيل الخروج بنجاح', Colors.green);
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        }
-      } else {
-        if (mounted) {
-          _showSnackBar('فشل تسجيل الخروج: ${response.statusCode} - ${response.body}', Colors.red);
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        }
+      if (mounted) {
+        _showSnackBar('تم تسجيل الخروج بنجاح', Colors.green);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
       }
     } catch (e) {
       SharedPreferences prefs = await SharedPreferences.getInstance();

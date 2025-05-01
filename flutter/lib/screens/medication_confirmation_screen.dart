@@ -66,36 +66,21 @@ class MedicationConfirmationScreenState
     setState(() => _isLoading = false);
   }
 
-  Future<void> _cancelMedication() async {
-    setState(() => _isLoading = true);
-    try {
-      await NotificationService.cancelNotification(widget.notificationId);
-      if (!mounted) return;
-      _showSnackBar('تم إلغاء المنبه', Colors.orange);
-      if (!mounted) return;
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar('فشل إلغاء المنبه: $e', Colors.red);
-      _logger.e('فشل إلغاء المنبه: $e');
-    }
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-  }
-
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white,
+                fontSize: 16,
               ),
         ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -108,8 +93,10 @@ class MedicationConfirmationScreenState
         appBar: AppBar(
           title: Text(
             'تأكيد تناول الدواء',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
                 ),
           ),
           centerTitle: true,
@@ -122,6 +109,7 @@ class MedicationConfirmationScreenState
               ),
             ),
           ),
+          elevation: 4,
         ),
         body: Container(
           decoration: const BoxDecoration(
@@ -131,14 +119,17 @@ class MedicationConfirmationScreenState
               end: Alignment.bottomCenter,
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Center(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
               child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                elevation: 12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9, // Larger card width
+                  padding: const EdgeInsets.all(24.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -147,57 +138,57 @@ class MedicationConfirmationScreenState
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                               color: Theme.of(context).primaryColor,
                               fontWeight: FontWeight.bold,
+                              fontSize: 28,
                             ),
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                       Text(
                         widget.body,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontSize: 18,
+                              color: Colors.grey[800],
+                            ),
                         textAlign: TextAlign.center,
                       ),
                       if (widget.medicationName != null) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 16),
                         Text(
                           'اسم الدواء: ${widget.medicationName}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Colors.black87,
                               ),
+                          textAlign: TextAlign.center,
                         ),
                       ],
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 32),
                       _isLoading
-                          ? const CircularProgressIndicator()
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: _confirmMedication,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'تم تناول الدواء',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                            )
+                          : ElevatedButton(
+                              onPressed: _confirmMedication,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 16,
                                 ),
-                                const SizedBox(width: 10),
-                                ElevatedButton(
-                                  onPressed: _cancelMedication,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'إلغاء',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ],
+                                elevation: 4,
+                              ),
+                              child: Text(
+                                'تم تناول الدواء',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
                             ),
                     ],
                   ),
