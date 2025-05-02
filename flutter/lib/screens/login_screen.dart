@@ -151,11 +151,14 @@ class LoginScreenState extends State<LoginScreen> {
         var error = data['error'];
         if (error is List && error.isNotEmpty) {
           String errorMessage = error[0].toString().toLowerCase();
-          if (errorMessage.contains('invalid email') ||
-              errorMessage.contains('user not found')) {
-            _showSnackBar('هذا الحساب غير موجود، من فضلك أنشئ حسابًا', Colors.red);
-          } else if (errorMessage.contains('password')) {
-            _showSnackBar('كلمة المرور غير صحيحة', Colors.red);
+          if (errorMessage.contains('invalid email or password')) {
+            _showSnackBar('تأكد من البريد الإلكتروني وكلمة المرور', Colors.red);
+          } else {
+            _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
+          }
+        } else if (error is String) {
+          if (error.toLowerCase().contains('invalid email or password')) {
+            _showSnackBar('تأكد من البريد الإلكتروني وكلمة المرور', Colors.red);
           } else {
             _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
           }
