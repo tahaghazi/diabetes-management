@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_screen.dart';
 import 'account_type_screen.dart';
 import 'package:diabetes_management/services/http_service.dart';
-import 'package:diabetes_management/services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,32 +25,6 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
-    // التحقق من تفاصيل الإشعار فقط إذا كان المستخدم مسجل الدخول
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? accessToken = prefs.getString('access_token');
-      if (accessToken != null) { // فقط إذا كان المستخدم مسجل الدخول
-        NotificationService.getNotificationAppLaunchDetails().then((details) {
-          if (details != null &&
-              details.notificationResponse != null &&
-              details.notificationResponse!.payload != null) {
-            final payload = jsonDecode(details.notificationResponse!.payload!);
-            if (payload['reminder_type'] == 'medication') {
-              Navigator.pushNamed(
-                context,
-                '/medication_confirmation',
-                arguments: {
-                  'notificationId': payload['id'],
-                  'title': payload['title'],
-                  'body': payload['body'],
-                  'medicationName': payload['medication_name'],
-                },
-              );
-            }
-          }
-        });
-      }
-    });
   }
 
   Future<void> _loadSavedCredentials() async {
