@@ -79,7 +79,13 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         }
       } else {
         final responseBody = response.body.isNotEmpty ? jsonDecode(response.body) : {};
-        final errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إرسال الكود (كود الحالة: ${response.statusCode})';
+        String errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إرسال الكود (كود الحالة: ${response.statusCode})';
+        
+        // Translate the specific error message to Arabic
+        if (errorMessage == 'No user found with this email') {
+          errorMessage = 'لا يوجد مستخدم مسجل بهذا البريد الإلكتروني';
+        }
+        
         _showSnackBar(errorMessage, Colors.red);
       }
     } catch (e) {
