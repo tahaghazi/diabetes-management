@@ -61,14 +61,15 @@ class LoginScreenState extends State<LoginScreen> {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
+    // التحقق من الحقول المحلية
     if (email.isEmpty || password.isEmpty) {
       _showSnackBar('يرجى إدخال البريد الإلكتروني وكلمة المرور', Colors.red);
       return;
     } else if (!isValidEmail(email)) {
       _showSnackBar('يرجى إدخال بريد إلكتروني صحيح', Colors.orange);
       return;
-    } else if (password.length < 6) {
-      _showSnackBar('يجب أن تكون كلمة المرور 6 أحرف أو أكثر', Colors.orange);
+    } else if (password.length < 8) {
+      _showSnackBar('يجب أن تكون كلمة المرور 8 أحرف أو أكثر', Colors.orange);
       return;
     }
 
@@ -98,16 +99,22 @@ class LoginScreenState extends State<LoginScreen> {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String accessToken = data['access'];
         String refreshToken = data['refresh'];
+        String accountType = data['user']['account_type'];
+
+        // حفظ البيانات الأساسية
         await prefs.setString('access_token', accessToken);
         await prefs.setString('refresh_token', refreshToken);
-        await prefs.setString('user_email', data['user']['email']);
-        await prefs.setString('account_type', data['user']['account_type']);
-        await prefs.setString('first_name', data['user']['first_name']);
-        await prefs.setString('last_name', data['user']['last_name']);
-        await prefs.setString(
-            'specialization', data['user']['specialization'] ?? '');
-        await prefs.setString(
-            'medical_history', data['user']['medical_history'] ?? '');
+        await prefs.setString('user_email', email);
+        await prefs.setString('account_type', accountType);
+
+        // حفظ بيانات إضافية بناءً على نوع الحساب
+        await prefs.setString('first_name', data['user']['first_name'] ?? '');
+        await prefs.setString('last_name', data['user']['last_name'] ?? '');
+        if (accountType == 'doctor') {
+          await prefs.setString('specialization', data['user']['specialization'] ?? '');
+        } else {
+          await prefs.setString('medical_history', data['user']['medical_history'] ?? '');
+        }
 
         HttpService().setTokens(accessToken, refreshToken);
         await _saveCredentials();
@@ -121,25 +128,18 @@ class LoginScreenState extends State<LoginScreen> {
           );
         }
       } else if (response.statusCode == 400) {
-        var error = data['error'];
-        if (error is List && error.isNotEmpty) {
-          String errorMessage = error[0].toString().toLowerCase();
-          if (errorMessage.contains('invalid email or password')) {
-            _showSnackBar('تأكد من البريد الإلكتروني وكلمة المرور', Colors.red);
-          } else {
-            _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
-          }
-        } else if (error is String) {
-          if (error.toLowerCase().contains('invalid email or password')) {
-            _showSnackBar('تأكد من البريد الإلكتروني وكلمة المرور', Colors.red);
-          } else {
-            _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
-          }
+        // معالجة الأخطاء بناءً على رسائل الـ API
+        if (data.containsKey('email') && data['email'] is List && data['email'].contains('This email does not exist.')) {
+          _showSnackBar('هذا البريد الإلكتروني غير مسجل', Colors.red);
+        } else if (data.containsKey('password') && data['password'] is List && data['password'].contains('Incorrect password.')) {
+          _showSnackBar('كلمة المرور غير صحيحة', Colors.red);
+        } else if (data.containsKey('error') && data['error'] == 'User profile is not set correctly.') {
+          _showSnackBar('  حدث خطأ   ', Colors.red);
         } else {
-          _showSnackBar('حدث خطأ أثناء تسجيل الدخول', Colors.red);
+          _showSnackBar('خطأ في بيانات تسجيل الدخول', Colors.red);
         }
       } else if (response.statusCode == 500) {
-        _showSnackBar('حدث خطأ في الخادم، حاول لاحقًا', Colors.red);
+        _showSnackBar('خطأ في الخادم، حاول لاحقًا', Colors.red);
       } else {
         _showSnackBar('حدث خطأ أثناء الاتصال بالخادم', Colors.red);
       }
@@ -161,6 +161,7 @@ class LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: color,
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -186,6 +187,10 @@ class LoginScreenState extends State<LoginScreen> {
               child: Center(
                 child: SingleChildScrollView(
                   child: Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -193,12 +198,21 @@ class LoginScreenState extends State<LoginScreen> {
                         children: [
                           Text(
                             '👋 مرحبًا!',
-                            style: Theme.of(context).textTheme.headlineMedium,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
                           Text(
                             'قم بتسجيل الدخول إلى حسابك',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: Colors.grey[600]),
                           ),
                           const SizedBox(height: 20),
                           TextField(
@@ -211,13 +225,13 @@ class LoginScreenState extends State<LoginScreen> {
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                    color: Colors.black, width: 1),
+                                borderSide:
+                                    const BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                    color: Colors.black, width: 1),
+                                borderSide:
+                                    const BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -250,13 +264,13 @@ class LoginScreenState extends State<LoginScreen> {
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                    color: Colors.black, width: 1),
+                                borderSide:
+                                    const BorderSide(color: Colors.black, width: 1),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                    color: Colors.black, width: 1),
+                                borderSide:
+                                    const BorderSide(color: Colors.black, width: 1),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -270,8 +284,13 @@ class LoginScreenState extends State<LoginScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('تذكرني',
-                                  style: Theme.of(context).textTheme.bodyMedium),
+                              Text(
+                                'تذكرني',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: Colors.grey[700]),
+                              ),
                               Checkbox(
                                 value: _rememberMe,
                                 onChanged: (value) {
@@ -287,14 +306,26 @@ class LoginScreenState extends State<LoginScreen> {
                               ? const CircularProgressIndicator()
                               : ElevatedButton(
                                   onPressed: _login,
-                                  child: const Text('تسجيل الدخول'),
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(double.infinity, 50),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'تسجيل الدخول',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
                                 ),
                           const SizedBox(height: 15),
                           TextButton(
                             onPressed: () {
                               Navigator.pushNamed(context, '/forgot_password');
                             },
-                            child: const Text('هل نسيت كلمة المرور؟'),
+                            child: const Text(
+                              'هل نسيت كلمة المرور؟',
+                              style: TextStyle(color: Colors.blue),
+                            ),
                           ),
                           TextButton(
                             onPressed: () {
@@ -304,7 +335,10 @@ class LoginScreenState extends State<LoginScreen> {
                                     builder: (context) => AccountTypeScreen()),
                               );
                             },
-                            child: const Text('ليس لديك حساب؟ إنشاء حساب'),
+                            child: const Text(
+                              'ليس لديك حساب؟ إنشاء حساب',
+                              style: TextStyle(color: Colors.blue),
+                            ),
                           ),
                         ],
                       ),
@@ -317,5 +351,12 @@ class LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

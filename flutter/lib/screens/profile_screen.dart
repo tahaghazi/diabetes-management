@@ -566,7 +566,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 15),
                                     _parseGlucoseReadings().isEmpty
                                         ? Center(
                                             child: Text(
@@ -662,7 +662,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                       indent: 20,
                                       endIndent: 20,
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 25),
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       children: [
@@ -677,7 +677,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 8),
                                     Text(
                                       'اضغط على الصورة لعرضها بالكامل أو على أيقونة الحذف لحذف التحليل',
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
