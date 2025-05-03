@@ -24,25 +24,25 @@ class RemindersScreenState extends State<RemindersScreen> {
   final Logger _logger = Logger();
 
   final List<String> _reminderTypes = [
-    'تحليل السكر',
+    'قياس السكر',
     'الدواء',
     'شرب الماء',
   ];
 
   final Map<String, String> _reminderTypeToApiValue = {
-    'تحليل السكر': 'blood_glucose_test',
+    'قياس السكر': 'blood_glucose_test',
     'الدواء': 'medication',
     'شرب الماء': 'hydration',
   };
 
   final Map<String, String> _apiValueToReminderType = {
-    'blood_glucose_test': 'تحليل السكر',
+    'blood_glucose_test': 'قياس السكر',
     'medication': 'الدواء',
     'hydration': 'شرب الماء',
   };
 
   final Map<String, List<Color>> _reminderTypeColors = {
-    'تحليل السكر': [Colors.purple.shade400, Colors.purple.shade200],
+    'قياس السكر': [Colors.purple.shade400, Colors.purple.shade200],
     'الدواء': [Colors.orange.shade400, Colors.orange.shade200],
     'شرب الماء': [Colors.blue.shade400, Colors.blue.shade200],
   };
@@ -777,7 +777,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
     IconData iconData;
     switch (reminder['reminder_type']) {
-      case 'تحليل السكر':
+      case 'قياس السكر':
         iconData = Icons.bloodtype;
         break;
       case 'الدواء':
@@ -847,7 +847,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
   Map<String, List<Map<String, dynamic>>> _groupRemindersByType() {
     Map<String, List<Map<String, dynamic>>> groupedReminders = {
-      'تحليل السكر': [],
+      'قياس السكر': [],
       'الدواء': [],
       'شرب الماء': [],
     };
@@ -926,7 +926,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
                         return ExpansionTile(
                           leading: Icon(
-                            reminderType == 'تحليل السكر'
+                            reminderType == 'قياس السكر'
                                 ? Icons.bloodtype
                                 : reminderType == 'الدواء'
                                     ? Icons.medical_services
