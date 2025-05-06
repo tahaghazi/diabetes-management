@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class HttpService {
   static final HttpService _instance = HttpService._internal();
@@ -35,9 +36,27 @@ class HttpService {
     _refreshToken = null;
   }
 
+  // دالة جديدة لتسجيل الخروج
+  Future<void> logout(BuildContext context) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('access_token');
+    await prefs.remove('refresh_token');
+    await prefs.remove('user_email');
+    await prefs.remove('account_type');
+    await prefs.remove('first_name');
+    await prefs.remove('last_name');
+    await prefs.remove('specialization');
+    await prefs.remove('medical_history');
+    clearTokens();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   Future<bool> refreshAccessToken() async {
-    if (_refreshToken == null) {
-      debugPrint("No refresh token available.");
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? refreshToken = prefs.getString('refresh_token');
+
+    if (refreshToken == null) {
+      debugPrint("No refresh token available in SharedPreferences.");
       return false;
     }
 
@@ -47,7 +66,7 @@ class HttpService {
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
         },
-        body: jsonEncode({'refresh': _refreshToken}),
+        body: jsonEncode({'refresh': refreshToken}),
       );
 
       debugPrint("Refresh Token Response Status: ${response.statusCode}");
@@ -58,13 +77,11 @@ class HttpService {
         String newAccessToken = data['access'];
         _accessToken = newAccessToken;
 
-        SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('access_token', newAccessToken);
         debugPrint("Access token refreshed successfully: $newAccessToken");
         return true;
       } else {
         debugPrint("Failed to refresh token: ${response.body}");
-        SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.remove('access_token');
         await prefs.remove('refresh_token');
         clearTokens();
@@ -72,7 +89,6 @@ class HttpService {
       }
     } catch (e) {
       debugPrint("Error refreshing token: $e");
-      SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove('access_token');
       await prefs.remove('refresh_token');
       clearTokens();
@@ -85,10 +101,15 @@ class HttpService {
     required Uri url,
     Map<String, String>? headers,
     dynamic body,
+    BuildContext? context, 
   }) async {
     headers ??= {};
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _accessToken = prefs.getString('access_token'); 
     if (_accessToken != null) {
       headers['Authorization'] = 'Bearer $_accessToken';
+    } else {
+      debugPrint("No access token available, proceeding without Authorization header.");
     }
 
     String? bodyString;
@@ -155,6 +176,10 @@ class HttpService {
         debugPrint('Retry Response Status: ${response.statusCode}');
         debugPrint('Retry Response Body: ${response.body}');
       } else {
+        debugPrint("Failed to refresh token, logging out...");
+        if (context != null) {
+          await logout(context);
+        }
         return null;
       }
     }
