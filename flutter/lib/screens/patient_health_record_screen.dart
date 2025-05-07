@@ -442,12 +442,6 @@ class PatientHealthRecordScreenState extends State<PatientHealthRecordScreen> wi
                                     'الاسم الكامل',
                                     _healthRecord!['full_name'] ?? 'غير متوفر',
                                   ),
-                                  const Divider(color: Colors.teal, thickness: 0.5),
-                                  _buildHealthRecordItem(
-                                    context,
-                                    'البريد الإلكتروني',
-                                    _healthRecord!['email'] ?? 'غير متوفر',
-                                  ),
                                 ],
                               ),
                             ),

@@ -359,7 +359,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
       return {
         'id': reading['id']?.toString() ?? '',
         'type': glucoseTypeMap[reading['glucose_type']] ?? reading['glucose_type']?.toString() ?? '',
-        'level': reading['glucose_value']?.toString() ?? '',
+        'level': '${reading['glucose_value']?.toString() ?? ''} mg/dL',
         'dateTime': reading['timestamp']?.toString() ?? '',
       };
     }).toList();
@@ -579,78 +579,83 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                           )
                                         : SingleChildScrollView(
                                             scrollDirection: Axis.horizontal,
-                                            child: DataTable(
-                                              columns: const [
-                                                DataColumn(
-                                                  label: Text(
-                                                    'الرقم',
-                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                            child: ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                minWidth: MediaQuery.of(context).size.width,
+                                              ),
+                                              child: DataTable(
+                                                columns: const [
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'الرقم',
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                    ),
                                                   ),
-                                                ),
-                                                DataColumn(
-                                                  label: Text(
-                                                    'نوع القياس',
-                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'نوع القياس',
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                    ),
                                                   ),
-                                                ),
-                                                DataColumn(
-                                                  label: Text(
-                                                    'مستوى السكر',
-                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'مستوى السكر',
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                    ),
                                                   ),
-                                                ),
-                                                DataColumn(
-                                                  label: Text(
-                                                    'التوقيت',
-                                                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                  DataColumn(
+                                                    label: Text(
+                                                      'التوقيت',
+                                                      style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
-                                              rows: _parseGlucoseReadings()
-                                                  .asMap()
-                                                  .entries
-                                                  .map(
-                                                    (entry) {
-                                                      final index = entry.key + 1;
-                                                      final reading = entry.value;
+                                                ],
+                                                rows: _parseGlucoseReadings()
+                                                    .asMap()
+                                                    .entries
+                                                    .map(
+                                                      (entry) {
+                                                        final index = entry.key + 1;
+                                                        final reading = entry.value;
 
-                                                      final dateTime = DateTime.parse(reading['dateTime']);
-                                                      final date =
-                                                          '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
-                                                      final time = DateFormat('h:mm a')
-                                                          .format(dateTime)
-                                                          .replaceAll('AM', 'صباحاً')
-                                                          .replaceAll('PM', 'مساءاً');
+                                                        final dateTime = DateTime.parse(reading['dateTime']);
+                                                        final date =
+                                                            '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+                                                        final time = DateFormat('h:mm a')
+                                                            .format(dateTime)
+                                                            .replaceAll('AM', 'صباحاً')
+                                                            .replaceAll('PM', 'مساءاً');
 
-                                                      return DataRow(
-                                                        cells: [
-                                                          DataCell(Text(index.toString())),
-                                                          DataCell(Text(reading['type'])),
-                                                          DataCell(Text(reading['level'])),
-                                                          DataCell(
-                                                            Column(
-                                                              mainAxisAlignment: MainAxisAlignment.center,
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                Text(date),
-                                                                Text(time),
-                                                              ],
+                                                        return DataRow(
+                                                          cells: [
+                                                            DataCell(Text(index.toString())),
+                                                            DataCell(Text(reading['type'])),
+                                                            DataCell(Text(reading['level'])),
+                                                            DataCell(
+                                                              Column(
+                                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  Text(date),
+                                                                  Text(time),
+                                                                ],
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ],
-                                                      );
-                                                    },
-                                                  )
-                                                  .toList(),
-                                              columnSpacing: 20,
-                                              dataRowMinHeight: 50,
-                                              dataRowMaxHeight: 50,
-                                              headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
-                                              dividerThickness: 1.0, // Add horizontal lines
-                                              decoration: BoxDecoration(
-                                                border: Border(
-                                                  right: BorderSide(color: Colors.grey.shade300),
-                                                  left: BorderSide(color: Colors.grey.shade300),
+                                                          ],
+                                                        );
+                                                      },
+                                                    )
+                                                    .toList(),
+                                                columnSpacing: 20,
+                                                dataRowMinHeight: 50,
+                                                dataRowMaxHeight: 50,
+                                                headingRowColor: WidgetStateProperty.all(Colors.teal.shade50),
+                                                dividerThickness: 1.0,
+                                                decoration: BoxDecoration(
+                                                  border: Border(
+                                                    right: BorderSide(color: Colors.grey.shade300),
+                                                    left: BorderSide(color: Colors.grey.shade300),
+                                                  ),
                                                 ),
                                               ),
                                             ),

@@ -154,10 +154,6 @@ class PatientMonitoringScreenState extends State<PatientMonitoringScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                               ),
-                              subtitle: Text(
-                                patient['email'] ?? 'غير متوفر',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
                               onTap: () {
                                 Navigator.push(
                                   context,
