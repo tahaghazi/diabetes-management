@@ -62,7 +62,7 @@ class HttpService {
 
     try {
       var response = await _client.post(
-        Uri.parse('http://192.168.100.6:8000/api/token/refresh/'),
+        Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/token/refresh/'),
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
         },

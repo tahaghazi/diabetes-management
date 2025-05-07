@@ -97,7 +97,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/profile/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/profile/'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json; charset=utf-8',
@@ -154,7 +154,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/my-doctor/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/my-doctor/'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json; charset=utf-8',
@@ -202,7 +202,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/glucose/list/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/glucose/list/'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json; charset=utf-8',
@@ -230,7 +230,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/my-analysis/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/my-analysis/'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json; charset=utf-8',
@@ -264,10 +264,10 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
     }
 
     try {
-      debugPrint('Sending DELETE request to: http://192.168.100.6:8000/api/delete-analysis/$analysisId/');
+      debugPrint('Sending DELETE request to: https://diabetesmanagement.pythonanywhere.com/api/delete-analysis/$analysisId/');
       final response = await _httpService.makeRequest(
         method: 'DELETE',
-        url: Uri.parse('http://192.168.100.6:8000/api/delete-analysis/$analysisId/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/delete-analysis/$analysisId/'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': 'Bearer $_token',
@@ -730,7 +730,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                                   context,
                                                                   MaterialPageRoute(
                                                                     builder: (context) => FullImageScreen(
-                                                                      imageUrl: 'http://192.168.100.6:8000$imageUrl',
+                                                                      imageUrl: 'https://diabetesmanagement.pythonanywhere.com$imageUrl',
                                                                     ),
                                                                   ),
                                                                 );
@@ -738,7 +738,7 @@ class ProfileAndSettingsScreenState extends State<ProfileScreen> with RouteAware
                                                         child: ClipRRect(
                                                           borderRadius: BorderRadius.circular(8),
                                                           child: Image.network(
-                                                            'http://192.168.100.6:8000$imageUrl',
+                                                            'https://diabetesmanagement.pythonanywhere.com$imageUrl',
                                                             height: 150,
                                                             width: double.infinity,
                                                             fit: BoxFit.cover,

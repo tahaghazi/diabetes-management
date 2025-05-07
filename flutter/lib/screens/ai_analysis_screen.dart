@@ -102,7 +102,7 @@ class AIAnalysisScreenState extends State<AIAnalysisScreen> {
 
         // Make API request
         final response = await http.post(
-          Uri.parse('http://192.168.100.6:8000/api/predict/'),
+          Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/predict/'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $authToken',

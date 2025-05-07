@@ -59,7 +59,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/glucose/list/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/glucose/list/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -88,7 +88,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     try {
       final response = await _httpService.makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/profile/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/profile/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -186,7 +186,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
 
         final response = await _httpService.makeRequest(
           method: 'POST',
-          url: Uri.parse('http://192.168.100.6:8000/api/glucose/add/'),
+          url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/glucose/add/'),
           headers: {'Content-Type': 'application/json'},
           body: body,
         );
@@ -307,7 +307,7 @@ class GlucoseTrackingScreenState extends State<GlucoseTrackingScreen> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.100.6:8000/api/upload-analysis/'),
+        Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/upload-analysis/'),
       );
 
       request.headers['Authorization'] = 'Bearer $_token';
