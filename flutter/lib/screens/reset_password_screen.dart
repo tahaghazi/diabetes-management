@@ -46,7 +46,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       var response = await HttpService().makeRequest(
         method: 'POST',
-        url: Uri.parse('http://192.168.100.6:8000/api/password_reset_confirm/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/password_reset_confirm/'),
         headers: {'Content-Type': 'application/json'},
         body: {
           'otp': otp,

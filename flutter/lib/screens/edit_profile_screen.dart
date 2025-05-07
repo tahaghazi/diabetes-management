@@ -65,7 +65,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final response = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/my-doctor/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/my-doctor/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -114,7 +114,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final response = await HttpService().makeRequest(
         method: 'POST',
-        url: Uri.parse('http://192.168.100.6:8000/api/unlink-from-doctor/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/unlink-from-doctor/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'doctor_id': _linkedDoctor!['id']}),
       );
@@ -177,7 +177,7 @@ class EditProfileScreenState extends State<EditProfileScreen> {
 
       var response = await HttpService().makeRequest(
         method: 'PUT',
-        url: Uri.parse('http://192.168.100.6:8000/api/update-profile/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/update-profile/'),
         headers: {
           'Content-Type': 'application/json',
         },

@@ -19,7 +19,7 @@ class LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _rememberMe = false;
 
-  final String _apiUrl = 'http://192.168.100.6:8000/api/login/';
+  final String _apiUrl = 'https://diabetesmanagement.pythonanywhere.com/api/login/';
 
   @override
   void initState() {

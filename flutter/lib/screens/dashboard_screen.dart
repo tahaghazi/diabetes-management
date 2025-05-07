@@ -71,7 +71,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     try {
       final response = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://192.168.100.6:8000/api/my-patients/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/my-patients/'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -273,7 +273,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       if (accessToken != null) {
         final response = await HttpService().makeRequest(
           method: 'POST',
-          url: Uri.parse('http://192.168.100.6:8000/api/logout/'),
+          url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/logout/'),
           headers: {'Content-Type': 'application/json'},
         );
 
@@ -328,7 +328,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   Future<List<Map<String, dynamic>>> _fetchDoctors(String query) async {
     final response = await HttpService().makeRequest(
       method: 'GET',
-      url: Uri.parse('http://192.168.100.6:8000/api/search-doctors/?query=$query'),
+      url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/search-doctors/?query=$query'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -821,7 +821,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                                     try {
                                       final response = await HttpService().makeRequest(
                                         method: 'POST',
-                                        url: Uri.parse('http://192.168.100.6:8000/api/link-to-doctor/'),
+                                        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/link-to-doctor/'),
                                         headers: {'Content-Type': 'application/json'},
                                         body: jsonEncode({'doctor_id': doctor['id']}),
                                       );
