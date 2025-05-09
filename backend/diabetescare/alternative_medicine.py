@@ -37,6 +37,6 @@ def recommend_info(drug_name):
             "Drug Name": row['Drug Name'],
             "Description": row.get('Description', 'N/A'),
             "Side Effects": row.get('Side Effects', 'N/A'),
-            "How to use with": row.get('How to use with', 'N/A')
+            "How to use with": row.get('Uses', 'N/A')  
         })
     return {"recommended_drugs": results}
