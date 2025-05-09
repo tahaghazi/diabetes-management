@@ -29,7 +29,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
         method: 'POST',
         url: Uri.parse('$baseUrl/drug-suggestions/'),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {'query': query},
       );
@@ -38,8 +38,10 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
         throw Exception('فشل في الاتصال: الرجاء تسجيل الدخول مرة أخرى');
       }
 
+      print('Drug suggestions raw response: ${response.body}'); // للتحقق من البيانات الخام
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         return data.cast<String>();
       } else {
         throw Exception('فشل في جلب اقتراحات الأدوية: ${response.body}');
@@ -63,7 +65,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
         method: 'POST',
         url: Uri.parse('$baseUrl/alternative-medicine/'),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
         },
         body: {'drug_name': drugName},
       );
@@ -75,8 +77,10 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
         return;
       }
 
+      print('Alternative medications raw response: ${response.body}'); // للتحقق من البيانات الخام
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> result = jsonDecode(response.body);
+        final Map<String, dynamic> result = jsonDecode(utf8.decode(response.bodyBytes));
         if (result.containsKey('error')) {
           setState(() {
             errorMessage = result['error'];
@@ -93,7 +97,6 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
             showAlternativeText = true;
           });
 
-          // Check if the widget is still mounted before using BuildContext
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -177,6 +180,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                             filled: true,
                             fillColor: Colors.white,
                           ),
+                          textDirection: TextDirection.rtl,
                         );
                       },
                       suggestionsCallback: (pattern) async {
@@ -185,7 +189,10 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                       },
                       itemBuilder: (context, suggestion) {
                         return ListTile(
-                          title: Text(suggestion),
+                          title: Text(
+                            suggestion,
+                            textDirection: TextDirection.rtl,
+                          ),
                         );
                       },
                       onSelected: (suggestion) {
@@ -220,6 +227,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                   child: Text(
                     errorMessage!,
                     style: const TextStyle(color: Colors.red, fontSize: 16),
+                    textDirection: TextDirection.rtl,
                   ),
                 ),
               if (showAlternativeText && filteredMedications.isNotEmpty) ...[
@@ -232,6 +240,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                       fontWeight: FontWeight.bold,
                       color: Colors.teal,
                     ),
+                    textDirection: TextDirection.rtl,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -244,35 +253,35 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                             decoration: BoxDecoration(
-                              color: Colors.cyan[50], // لون الخلفية السماوي الفاتح
-                              borderRadius: BorderRadius.circular(12.0), // زوايا دائرية
+                              color: Colors.cyan[50],
+                              borderRadius: BorderRadius.circular(12.0),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color.fromRGBO(158, 158, 158, 0.3), // Updated (line 251)
+                                  color: const Color.fromRGBO(158, 158, 158, 0.3),
                                   spreadRadius: 2,
                                   blurRadius: 6,
-                                  offset: const Offset(0, 3), // اتجاه الظل
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
                             child: DataTable(
-                              dividerThickness: 1.5, // سمك الفواصل
-                              dataRowMinHeight: 50, // ارتفاع الصف
+                              dividerThickness: 1.5,
+                              dataRowMinHeight: 50,
                               dataRowMaxHeight: 50,
-                              columnSpacing: 15, // التباعد بين الأعمدة
+                              columnSpacing: 15,
                               decoration: BoxDecoration(
-                                color: Colors.cyan[50], // لون الخلفية السماوي الفاتح
-                                border: Border.all(color: Colors.grey.shade400), // حدود خارجية
-                                borderRadius: BorderRadius.circular(12.0), // زوايا دائرية
+                                color: Colors.cyan[50],
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(12.0),
                               ),
                               border: TableBorder(
                                 verticalInside: BorderSide(
                                   width: 1.5,
-                                  color: Colors.grey.shade400, // لون الحدود الرأسية
+                                  color: Colors.grey.shade400,
                                 ),
                                 horizontalInside: BorderSide(
                                   width: 1.5,
-                                  color: Colors.grey.shade400, // لون الحدود الأفقية
+                                  color: Colors.grey.shade400,
                                 ),
                               ),
                               columns: const [
@@ -281,11 +290,11 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                     padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                     child: Text(
                                       'الرقم',
-                                      textAlign: TextAlign.center, // محاذاة النص في المنتصف
+                                      textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontWeight: FontWeight.bold, // جعل النص Bold
-                                        color: Colors.black, // لون النص أسود
-                                        fontSize: 16, // زيادة حجم الخط
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                        fontSize: 16,
                                         letterSpacing: 0.5,
                                         wordSpacing: 1.0,
                                       ),
@@ -358,12 +367,11 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                 ),
                               ],
                               rows: filteredMedications.asMap().entries.map((entry) {
-                                int index = entry.key + 1; // الترقيم يبدأ من 1
+                                int index = entry.key + 1;
                                 Map<String, String> med = entry.value;
                                 return DataRow(
-                                  color: WidgetStateProperty.resolveWith<Color?>( // Updated (line 364)
-                                    (Set<WidgetState> states) { // Updated (line 365)
-                                      // ألوان متناوبة للصفوف
+                                  color: WidgetStateProperty.resolveWith<Color?>(
+                                    (Set<WidgetState> states) {
                                       return index % 2 == 0 ? Colors.white : Colors.cyan[50];
                                     },
                                   ),
@@ -371,7 +379,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                     DataCell(
                                       Text(
                                         '$index',
-                                        textAlign: TextAlign.center, // محاذاة النص في المنتصف
+                                        textAlign: TextAlign.center,
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
@@ -384,6 +392,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                       Text(
                                         med['name']!,
                                         textAlign: TextAlign.center,
+                                        textDirection: TextDirection.rtl,
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
@@ -396,6 +405,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                       Text(
                                         med['description']!,
                                         textAlign: TextAlign.center,
+                                        textDirection: TextDirection.rtl,
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
@@ -408,6 +418,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                       Text(
                                         med['sideEffect']!,
                                         textAlign: TextAlign.center,
+                                        textDirection: TextDirection.rtl,
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
@@ -420,6 +431,7 @@ class AlternativeMedicationsScreenState extends State<AlternativeMedicationsScre
                                       Text(
                                         med['howToUse']!,
                                         textAlign: TextAlign.center,
+                                        textDirection: TextDirection.rtl,
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
