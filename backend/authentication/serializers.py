@@ -60,12 +60,12 @@ class UserLoginSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError({"error": "Invalid email or password."})
+            raise serializers.ValidationError({"email": "This email does not exist."})
 
         user = authenticate(username=user.username, password=password)
         if not user:
-            raise serializers.ValidationError({"error": "Invalid email or password."})
-        
+            raise serializers.ValidationError({"password": "Incorrect password."})
+
         if hasattr(user, 'patientprofile'):
             account_type = 'patient'
         elif hasattr(user, 'doctorprofile'):

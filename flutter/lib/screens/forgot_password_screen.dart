@@ -51,8 +51,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       final response = await HttpService().makeRequest(
         method: 'POST',
-        url: Uri.parse('http://10.0.2.2:8000/api/password_reset/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/password_reset/'),
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/password_reset/'),
         headers: {'Content-Type': 'application/json'},
         body: {'email': email},
       );
@@ -80,7 +79,13 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         }
       } else {
         final responseBody = response.body.isNotEmpty ? jsonDecode(response.body) : {};
-        final errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إرسال الكود (كود الحالة: ${response.statusCode})';
+        String errorMessage = responseBody['error'] ?? 'حدث خطأ أثناء إرسال الكود (كود الحالة: ${response.statusCode})';
+        
+        // Translate the specific error message to Arabic
+        if (errorMessage == 'No user found with this email') {
+          errorMessage = 'لا يوجد مستخدم مسجل بهذا البريد الإلكتروني';
+        }
+        
         _showSnackBar(errorMessage, Colors.red);
       }
     } catch (e) {

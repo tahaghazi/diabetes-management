@@ -8,13 +8,13 @@ class PatientProfileUpdateSerializer(serializers.ModelSerializer):
         fields = ['first_name', 'last_name', 'medical_history']
 
     def validate_first_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("First name should only contain letters.")
+        if not value.replace(" ", "").isalpha():
+            raise serializers.ValidationError("First name should only contain letters and spaces.")
         return value
 
     def validate_last_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("Last name should only contain letters.")
+        if not value.replace(" ", "").isalpha():
+            raise serializers.ValidationError("Last name should only contain letters and spaces.")
         return value
 
 class DoctorProfileUpdateSerializer(serializers.ModelSerializer):
@@ -28,13 +28,13 @@ class DoctorProfileUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_first_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("First name should only contain letters.")
+        if not value.replace(" ", "").isalpha():
+            raise serializers.ValidationError("First name should only contain letters and spaces.")
         return value
 
     def validate_last_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("Last name should only contain letters.")
+        if not value.replace(" ", "").isalpha():
+            raise serializers.ValidationError("Last name should only contain letters and spaces.")
         return value
 
 class DoctorSerializer(serializers.ModelSerializer):

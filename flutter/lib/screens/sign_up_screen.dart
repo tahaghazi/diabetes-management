@@ -33,8 +33,7 @@ class SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      var url = Uri.parse('http://10.0.2.2:8000/api/register/');
-      //var url = Uri.parse('http://127.0.0.1:8000/api/register/');
+      var url = Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/register/');
       var requestBody = {
         'email': _emailController.text.trim(),
         'password1': _passwordController.text.trim(),
@@ -61,8 +60,7 @@ class SignUpScreenState extends State<SignUpScreen> {
       }
 
       var responseData = jsonDecode(utf8.decode(response.bodyBytes));
-      debugPrint('Response first_name: ${responseData['user']['first_name']}');
-      debugPrint('Response last_name: ${responseData['user']['last_name']}');
+      debugPrint('Response: $responseData');
 
       if (response.statusCode == 201) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -83,6 +81,8 @@ class SignUpScreenState extends State<SignUpScreen> {
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/dashboard');
         }
+      } else if (response.statusCode == 400 && responseData.containsKey('email')) {
+        _showSnackBar('البريد الإلكتروني مستخدم بالفعل', Colors.red);
       } else {
         _showSnackBar(responseData['error'] ?? 'حدث خطأ ما', Colors.red);
       }
@@ -126,13 +126,13 @@ class SignUpScreenState extends State<SignUpScreen> {
           centerTitle: true,
           flexibleSpace: Container(
             decoration: const BoxDecoration(
-              gradient: AppTheme.appBarGradient, // استخدام تدرج AppBar من الثيم
+              gradient: AppTheme.appBarGradient,
             ),
           ),
         ),
         body: Container(
           decoration: const BoxDecoration(
-            gradient: AppTheme.backgroundGradient, // استخدام تدرج الخلفية من الثيم
+            gradient: AppTheme.backgroundGradient,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -236,7 +236,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                               labelText: 'البريد الإلكتروني',
                               labelStyle: Theme.of(context).textTheme.bodyMedium,
                               prefixIcon: const Icon(Icons.email),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10), // تعديل المسافات الداخلية
+                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                             ),
                             style: Theme.of(context).textTheme.bodyMedium,
                             textDirection: TextDirection.rtl,
@@ -269,7 +269,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                                   });
                                 },
                               ),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10), // تعديل المسافات الداخلية
+                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                             ),
                             style: Theme.of(context).textTheme.bodyMedium,
                             textDirection: TextDirection.rtl,
@@ -277,8 +277,8 @@ class SignUpScreenState extends State<SignUpScreen> {
                               if (value == null || value.trim().isEmpty) {
                                 return 'يرجى إدخال كلمة المرور';
                               }
-                              if (value.length < 6) {
-                                return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                              if (value.length < 8) {
+                                return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
                               }
                               return null;
                             },
@@ -302,7 +302,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                                   });
                                 },
                               ),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10), // تعديل المسافات الداخلية
+                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                             ),
                             style: Theme.of(context).textTheme.bodyMedium,
                             textDirection: TextDirection.rtl,

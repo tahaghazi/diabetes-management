@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diabetes_management/services/http_service.dart';
 import 'package:diabetes_management/services/notification_service.dart';
-import 'package:diabetes_management/config/theme.dart'; // استيراد الثيم
+import 'package:diabetes_management/config/theme.dart';
+import 'package:logger/logger.dart';
 
 class RemindersScreen extends StatefulWidget {
   const RemindersScreen({super.key});
@@ -20,28 +21,28 @@ class RemindersScreenState extends State<RemindersScreen> {
   final TextEditingController _medicationController = TextEditingController();
   List<Map<String, dynamic>> _reminders = [];
   bool _isLoading = false;
+  final Logger _logger = Logger();
 
   final List<String> _reminderTypes = [
-    'تحليل السكر',
+    'قياس السكر',
     'الدواء',
     'شرب الماء',
   ];
 
   final Map<String, String> _reminderTypeToApiValue = {
-    'تحليل السكر': 'blood_glucose_test',
+    'قياس السكر': 'blood_glucose_test',
     'الدواء': 'medication',
     'شرب الماء': 'hydration',
   };
 
   final Map<String, String> _apiValueToReminderType = {
-    'blood_glucose_test': 'تحليل السكر',
+    'blood_glucose_test': 'قياس السكر',
     'medication': 'الدواء',
     'hydration': 'شرب الماء',
   };
 
-  // خريطة الألوان الجديدة لكل نوع تذكير
   final Map<String, List<Color>> _reminderTypeColors = {
-    'تحليل السكر': [Colors.purple.shade400, Colors.purple.shade200],
+    'قياس السكر': [Colors.purple.shade400, Colors.purple.shade200],
     'الدواء': [Colors.orange.shade400, Colors.orange.shade200],
     'شرب الماء': [Colors.blue.shade400, Colors.blue.shade200],
   };
@@ -49,7 +50,6 @@ class RemindersScreenState extends State<RemindersScreen> {
   @override
   void initState() {
     super.initState();
-    NotificationService.init();
     _loadReminders();
   }
 
@@ -73,9 +73,8 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       var response = await HttpService().makeRequest(
         method: 'GET',
-        url: Uri.parse('http://10.0.2.2:8000/api/get-reminders/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/get-reminders/'),
-        headers: {'Content-Type': 'application/json'},
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/get-reminders/'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
       );
 
       if (response == null) {
@@ -114,9 +113,24 @@ class RemindersScreenState extends State<RemindersScreen> {
   }
 
   Future<void> _addReminder() async {
-    if (!_formKey.currentState!.validate() || _selectedTime == null) {
+    // تحقق من أن نوع التذكير تم اختياره
+    if (!_formKey.currentState!.validate()) {
       if (!mounted) return;
-      _showSnackBar('يرجى اختيار نوع التذكير والوقت', Colors.red);
+      _showSnackBar('يرجى اختيار نوع التذكير', Colors.red);
+      return;
+    }
+
+    // تحقق من أن الوقت تم اختياره
+    if (_selectedTime == null) {
+      if (!mounted) return;
+      _showSnackBar('يرجى اختيار الوقت', Colors.red);
+      return;
+    }
+
+    // تحقق من أن اسم الدواء تم إدخاله إذا كان نوع التذكير "الدواء"
+    if (_selectedReminderType == 'الدواء' && (_medicationName == null || _medicationName!.isEmpty)) {
+      if (!mounted) return;
+      _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
       return;
     }
 
@@ -140,6 +154,8 @@ class RemindersScreenState extends State<RemindersScreen> {
         if (_medicationName != null && _selectedReminderType == 'الدواء') 'medication_name': _medicationName,
       };
 
+      _logger.d('Request Body: $requestBody');
+
       var tempReminder = {
         'reminder_type': _selectedReminderType,
         'reminder_time': requestBody['reminder_time'],
@@ -154,10 +170,9 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       var response = await HttpService().makeRequest(
         method: 'POST',
-        url: Uri.parse('http://10.0.2.2:8000/api/create-reminder/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/create-reminder/'),
-        headers: {'Content-Type': 'application/json'},
-        body: requestBody,
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/create-reminder/'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode(requestBody),
       );
 
       if (response == null) {
@@ -170,7 +185,8 @@ class RemindersScreenState extends State<RemindersScreen> {
       }
 
       if (response.statusCode == 201) {
-        var newReminder = jsonDecode(response.body);
+        var newReminder = jsonDecode(utf8.decode(response.bodyBytes));
+        _logger.d('Response Data: $newReminder');
         if (!mounted) return;
         _showSnackBar('تم إضافة التذكير بنجاح!', Colors.green);
         setState(() {
@@ -189,7 +205,7 @@ class RemindersScreenState extends State<RemindersScreen> {
         setState(() {
           _reminders.remove(tempReminder);
         });
-        var responseData = jsonDecode(response.body);
+        var responseData = jsonDecode(utf8.decode(response.bodyBytes));
         if (!mounted) return;
         _showSnackBar(responseData['error'] ?? 'حدث خطأ أثناء إضافة التذكير', Colors.red);
       }
@@ -198,13 +214,20 @@ class RemindersScreenState extends State<RemindersScreen> {
         _reminders.removeWhere((r) => r['id'] == -1);
       });
       if (!mounted) return;
-      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+      _showSnackBar('فشل الاتصال بالسيرفر: $e', Colors.red);
     }
     if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
   Future<void> _updateReminder(int id, String reminderType, TimeOfDay newTime, String? medicationName) async {
+    // تحقق من أن اسم الدواء تم إدخاله إذا كان نوع التذكير "الدواء"
+    if (reminderType == 'الدواء' && (medicationName == null || medicationName.isEmpty)) {
+      if (!mounted) return;
+      _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -226,10 +249,9 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       var response = await HttpService().makeRequest(
         method: 'PUT',
-        url: Uri.parse('http://10.0.2.2:8000/api/update-reminder/$id/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/update-reminder/$id/'),
-        headers: {'Content-Type': 'application/json'},
-        body: requestBody,
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/update-reminder/$id/'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode(requestBody),
       );
 
       if (response == null) {
@@ -239,20 +261,20 @@ class RemindersScreenState extends State<RemindersScreen> {
       }
 
       if (response.statusCode == 200) {
-        var updatedReminder = jsonDecode(response.body);
+        var updatedReminder = jsonDecode(utf8.decode(response.bodyBytes));
         if (!mounted) return;
         _showSnackBar('تم تعديل التذكير بنجاح!', Colors.green);
         await NotificationService.cancelNotification(id);
         _scheduleNotificationForReminder(updatedReminder);
         await _loadReminders();
       } else {
-        var responseData = jsonDecode(response.body);
+        var responseData = jsonDecode(utf8.decode(response.bodyBytes));
         if (!mounted) return;
         _showSnackBar(responseData['error'] ?? 'حدث خطأ أثناء تعديل التذكير', Colors.red);
       }
     } catch (e) {
       if (!mounted) return;
-      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+      _showSnackBar('فشل الاتصال بالسيرفر: $e', Colors.red);
     }
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -260,9 +282,22 @@ class RemindersScreenState extends State<RemindersScreen> {
 
   Future<void> _deleteReminder(int id, int index) async {
     setState(() => _isLoading = true);
-    var tempReminder = _reminders[index];
+
+    // البحث عن التذكير في القائمة الرئيسية باستخدام id
+    final reminderIndex = _reminders.indexWhere((r) => r['id'] == id);
+    if (reminderIndex == -1) {
+      if (!mounted) return;
+      _showSnackBar('التذكير غير موجود', Colors.red);
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // حفظ التذكير المراد حذفه
+    final tempReminder = Map<String, dynamic>.from(_reminders[reminderIndex]);
+
+    // إزالة التذكير من القائمة
     setState(() {
-      _reminders.removeAt(index);
+      _reminders.removeAt(reminderIndex);
     });
 
     try {
@@ -271,7 +306,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       if (accessToken == null) {
         setState(() {
-          _reminders.insert(index, tempReminder);
+          _reminders.insert(reminderIndex, tempReminder);
         });
         if (!mounted) return;
         _showSnackBar('يرجى تسجيل الدخول مرة أخرى', Colors.red);
@@ -282,14 +317,13 @@ class RemindersScreenState extends State<RemindersScreen> {
 
       var response = await HttpService().makeRequest(
         method: 'DELETE',
-        url: Uri.parse('http://10.0.2.2:8000/api/delete-reminder/$id/'),
-        //url: Uri.parse('http://127.0.0.1:8000/api/delete-reminder/$id/'),
-        headers: {'Content-Type': 'application/json'},
+        url: Uri.parse('https://diabetesmanagement.pythonanywhere.com/api/delete-reminder/$id/'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
       );
 
       if (response == null) {
         setState(() {
-          _reminders.insert(index, tempReminder);
+          _reminders.insert(reminderIndex, tempReminder);
         });
         if (!mounted) return;
         _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
@@ -302,17 +336,17 @@ class RemindersScreenState extends State<RemindersScreen> {
         await NotificationService.cancelNotification(id);
       } else {
         setState(() {
-          _reminders.insert(index, tempReminder);
+          _reminders.insert(reminderIndex, tempReminder);
         });
         if (!mounted) return;
         _showSnackBar('فشل حذف التذكير', Colors.red);
       }
     } catch (e) {
       setState(() {
-        _reminders.insert(index, tempReminder);
+        _reminders.insert(reminderIndex, tempReminder);
       });
       if (!mounted) return;
-      _showSnackBar('فشل الاتصال بالسيرفر', Colors.red);
+      _showSnackBar('فشل الاتصال بالسيرفر: $e', Colors.red);
     }
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -327,6 +361,9 @@ class RemindersScreenState extends State<RemindersScreen> {
     final scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
 
     final reminderType = _apiValueToReminderType[reminder['reminder_type']] ?? reminder['reminder_type'];
+
+    _logger.d('Notification Title: تذكير: $reminderType');
+    _logger.d('Notification Body: ${reminderType == 'الدواء' && reminder['medication_name'] != null ? 'حان وقت $reminderType (${reminder['medication_name']})!' : 'حان وقت $reminderType!'}');
 
     NotificationService.scheduleDailyNotification(
       id: reminder['id'],
@@ -365,7 +402,9 @@ class RemindersScreenState extends State<RemindersScreen> {
       SnackBar(
         content: Text(
           message,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white,
+              ),
         ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
@@ -391,32 +430,48 @@ class RemindersScreenState extends State<RemindersScreen> {
 
     showGeneralDialog(
       context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       pageBuilder: (context, anim1, anim2) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'تعديل التذكير',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Theme.of(context).primaryColor),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Theme.of(context).primaryColor,
+              ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'إلغاء',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey,
+                  ),
             ),
           ),
           TextButton(
             onPressed: () {
-              if (editReminderType != null && editTime != null) {
-                _updateReminder(reminder['id'], editReminderType!, editTime!, editMedicationName);
-                Navigator.pop(context);
-              } else {
-                _showSnackBar('يرجى ملء جميع الحقول', Colors.red);
+              if (editReminderType == null) {
+                _showSnackBar('يرجى اختيار نوع التذكير', Colors.red);
+                return;
               }
+              if (editTime == null) {
+                _showSnackBar('يرجى اختيار الوقت', Colors.red);
+                return;
+              }
+              if (editReminderType == 'الدواء' && (editMedicationName == null || editMedicationName== null)) {
+                _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
+                return;
+              }
+              _updateReminder(reminder['id'], editReminderType!, editTime!, editMedicationName);
+              Navigator.pop(context);
             },
             child: Text(
               'حفظ',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).primaryColor),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).primaryColor,
+                  ),
             ),
           ),
         ],
@@ -452,7 +507,10 @@ class RemindersScreenState extends State<RemindersScreen> {
                       items: _reminderTypes.map((String type) {
                         return DropdownMenuItem<String>(
                           value: type,
-                          child: Text(type, style: Theme.of(context).textTheme.bodyMedium),
+                          child: Text(
+                            type,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
@@ -471,7 +529,7 @@ class RemindersScreenState extends State<RemindersScreen> {
                       TextFormField(
                         controller: medicationController,
                         decoration: InputDecoration(
-                          labelText: 'اسم الدواء (اختياري)',
+                          labelText: 'اسم الدواء',
                           labelStyle: Theme.of(context).textTheme.bodyMedium,
                           prefixIcon: Icon(Icons.medical_services, color: Theme.of(context).primaryColor),
                           filled: true,
@@ -492,6 +550,13 @@ class RemindersScreenState extends State<RemindersScreen> {
                         style: Theme.of(context).textTheme.bodyMedium,
                         onChanged: (value) {
                           editMedicationName = value.isEmpty ? null : value;
+                          _logger.d('Medication Name Input: $editMedicationName');
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'يرجى كتابة اسم الدواء';
+                          }
+                          return null;
                         },
                       ),
                     const SizedBox(height: 16),
@@ -507,7 +572,9 @@ class RemindersScreenState extends State<RemindersScreen> {
                       ),
                       child: Text(
                         editTime == null ? 'اختر الوقت' : 'الوقت: ${_formatTime(editTime!)}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white,
+                            ),
                       ),
                     ),
                   ],
@@ -533,32 +600,48 @@ class RemindersScreenState extends State<RemindersScreen> {
   void _showAddReminderDialog() {
     showGeneralDialog(
       context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       pageBuilder: (context, anim1, anim2) => AlertDialog(
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
         title: Text(
           'إضافة تذكير جديد',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Theme.of(context).primaryColor),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Theme.of(context).primaryColor,
+              ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'إلغاء',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey,
+                  ),
             ),
           ),
           TextButton(
             onPressed: () {
-              if (_formKey.currentState!.validate() && _selectedTime != null) {
-                _addReminder();
-                Navigator.pop(context);
-              } else {
-                _showSnackBar('يرجى ملء جميع الحقول', Colors.red);
+              if (!_formKey.currentState!.validate()) {
+                _showSnackBar('يرجى ملء كل الحقول', Colors.red);
+                return;
               }
+              if (_selectedTime == null) {
+                _showSnackBar('يرجى اختيار الوقت', Colors.red);
+                return;
+              }
+              if (_selectedReminderType == 'الدواء' && (_medicationName == null || _medicationName!.isEmpty)) {
+                _showSnackBar('يرجى كتابة اسم الدواء', Colors.red);
+                return;
+              }
+              _addReminder();
+              Navigator.pop(context);
             },
             child: Text(
               'إضافة',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).primaryColor),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).primaryColor,
+                  ),
             ),
           ),
         ],
@@ -596,7 +679,10 @@ class RemindersScreenState extends State<RemindersScreen> {
                         items: _reminderTypes.map((String type) {
                           return DropdownMenuItem<String>(
                             value: type,
-                            child: Text(type, style: Theme.of(context).textTheme.bodyMedium),
+                            child: Text(
+                              type,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
                           );
                         }).toList(),
                         onChanged: (String? newValue) {
@@ -613,7 +699,7 @@ class RemindersScreenState extends State<RemindersScreen> {
                         TextFormField(
                           controller: _medicationController,
                           decoration: InputDecoration(
-                            labelText: 'اسم الدواء (اختياري)',
+                            labelText: 'اسم الدواء',
                             labelStyle: Theme.of(context).textTheme.bodyMedium,
                             prefixIcon: Icon(Icons.medical_services, color: Theme.of(context).primaryColor),
                             filled: true,
@@ -635,7 +721,14 @@ class RemindersScreenState extends State<RemindersScreen> {
                           onChanged: (value) {
                             setState(() {
                               _medicationName = value.isEmpty ? null : value;
+                              _logger.d('Medication Name Input: $_medicationName');
                             });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'يرجى كتابة اسم الدواء';
+                            }
+                            return null;
                           },
                         ),
                       const SizedBox(height: 16),
@@ -652,7 +745,9 @@ class RemindersScreenState extends State<RemindersScreen> {
                           _selectedTime == null
                               ? 'اختر الوقت'
                               : 'التذكير: ${_formatTime(_selectedTime!)}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.white,
+                              ),
                         ),
                       ),
                     ],
@@ -682,7 +777,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
     IconData iconData;
     switch (reminder['reminder_type']) {
-      case 'تحليل السكر':
+      case 'قياس السكر':
         iconData = Icons.bloodtype;
         break;
       case 'الدواء':
@@ -727,7 +822,9 @@ class RemindersScreenState extends State<RemindersScreen> {
             reminder['reminder_type'] == 'الدواء' && reminder['medication_name'] != null
                 ? '${_formatTime(time)} - ${reminder['medication_name']}'
                 : _formatTime(time),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white70,
+                ),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -750,7 +847,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
   Map<String, List<Map<String, dynamic>>> _groupRemindersByType() {
     Map<String, List<Map<String, dynamic>>> groupedReminders = {
-      'تحليل السكر': [],
+      'قياس السكر': [],
       'الدواء': [],
       'شرب الماء': [],
     };
@@ -772,7 +869,9 @@ class RemindersScreenState extends State<RemindersScreen> {
         appBar: AppBar(
           title: Text(
             'التذكيرات',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                ),
           ),
           centerTitle: true,
           flexibleSpace: Container(
@@ -805,13 +904,13 @@ class RemindersScreenState extends State<RemindersScreen> {
                           Icon(
                             Icons.notifications_off,
                             size: 80,
-                            color: Theme.of(context).primaryColor.withOpacity(0.5),
+                            color: Color.fromRGBO(0, 128, 128, 0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'لا توجد تذكيرات حاليًا',
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: Theme.of(context).primaryColor.withOpacity(0.7),
+                                  color: Color.fromRGBO(0, 128, 128, 0.7),
                                 ),
                           ),
                         ],
@@ -827,7 +926,7 @@ class RemindersScreenState extends State<RemindersScreen> {
 
                         return ExpansionTile(
                           leading: Icon(
-                            reminderType == 'تحليل السكر'
+                            reminderType == 'قياس السكر'
                                 ? Icons.bloodtype
                                 : reminderType == 'الدواء'
                                     ? Icons.medical_services
@@ -840,12 +939,12 @@ class RemindersScreenState extends State<RemindersScreen> {
                                   color: Theme.of(context).primaryColor,
                                 ),
                           ),
+                          initiallyExpanded: true,
                           children: reminders.asMap().entries.map((entry) {
                             final index = entry.key;
                             final reminder = entry.value;
                             return _buildReminderItem(reminder, index);
                           }).toList(),
-                          initiallyExpanded: true,
                         );
                       }).toList(),
                     ),
